@@ -12,4 +12,11 @@ public interface IEmailService
         string ipAddress,
         string userAgent
     );
+    Task SendPasswordResetConfirmationAsync(
+        string toEmail,
+        string userName,
+        string ipAddress,
+        string userAgent
+    );
+    Task SendPasswordSetConfirmationAsync(string toEmail, string userName);
 }

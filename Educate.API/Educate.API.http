@@ -51,3 +51,37 @@ Content-Type: application/json
 }
 
 ###
+
+# Forgot Password
+POST {{Educate.API_HostAddress}}/api/auth/forgot-password
+Content-Type: application/json
+
+{
+  "email": "user@example.com"
+}
+
+###
+
+# Reset Password
+POST {{Educate.API_HostAddress}}/api/auth/reset-password
+Content-Type: application/json
+
+{
+  "token": "jwt-reset-token-from-email",
+  "newPassword": "NewSecurePass123",
+  "confirmPassword": "NewSecurePass123"
+}
+
+###
+
+# Set Password (OAuth users)
+POST {{Educate.API_HostAddress}}/api/auth/set-password
+Content-Type: application/json
+Authorization: Bearer {{jwt-token}}
+
+{
+  "newPassword": "SecurePass123",
+  "confirmPassword": "SecurePass123"
+}
+
+###

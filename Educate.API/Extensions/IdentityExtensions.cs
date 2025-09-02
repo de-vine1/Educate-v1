@@ -1,5 +1,6 @@
 using Educate.Domain.Entities;
 using Educate.Infrastructure.Database;
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Identity;
 
 namespace Educate.API.Extensions;
@@ -16,14 +17,21 @@ public static class IdentityExtensions
                 options.Password.RequireNonAlphanumeric = false;
                 options.Password.RequireUppercase = true;
                 options.Password.RequireLowercase = true;
-                
+
                 // Account lockout settings
                 options.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromMinutes(15);
                 options.Lockout.MaxFailedAccessAttempts = 5;
                 options.Lockout.AllowedForNewUsers = true;
+
+                // Token settings
+                options.Tokens.PasswordResetTokenProvider = TokenOptions.DefaultProvider;
             })
             .AddEntityFrameworkStores<AppDbContext>()
             .AddDefaultTokenProviders();
+
+        services.Configure<DataProtectionTokenProviderOptions>(opt =>
+            opt.TokenLifespan = TimeSpan.FromMinutes(30)
+        );
 
         return services;
     }

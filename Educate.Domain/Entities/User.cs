@@ -12,6 +12,8 @@ public class User : IdentityUser
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime? LastLoginAt { get; set; }
     public DateTime? EmailConfirmedAt { get; set; }
+    public string? OAuthProvider { get; set; }
+    public string? OAuthId { get; set; }
 
     public ICollection<Subscription> Subscriptions { get; set; } = new List<Subscription>();
     public ICollection<Payment> Payments { get; set; } = new List<Payment>();

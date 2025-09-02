@@ -1,9 +1,13 @@
 using Educate.Application.Interfaces;
 using Educate.Application.Models.DTOs;
 using Educate.Domain.Entities;
+using Educate.Infrastructure.Database;
+using Educate.Infrastructure.Services;
 using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 
 namespace Educate.API.Controllers;
 
@@ -14,16 +18,22 @@ public class AuthController : ControllerBase
     private readonly UserManager<User> _userManager;
     private readonly IEmailService _emailService;
     private readonly ILogger<AuthController> _logger;
+    private readonly AppDbContext _context;
+    private readonly RateLimitingService _rateLimitingService;
 
     public AuthController(
         UserManager<User> userManager,
         IEmailService emailService,
-        ILogger<AuthController> logger
+        ILogger<AuthController> logger,
+        AppDbContext context,
+        RateLimitingService rateLimitingService
     )
     {
         _userManager = userManager;
         _emailService = emailService;
         _logger = logger;
+        _context = context;
+        _rateLimitingService = rateLimitingService;
     }
 
     [HttpPost("register")]
@@ -259,6 +269,9 @@ public class AuthController : ControllerBase
         var lastName =
             claims.FirstOrDefault(c => c.Type == System.Security.Claims.ClaimTypes.Surname)?.Value
             ?? "";
+        var googleId = claims
+            .FirstOrDefault(c => c.Type == System.Security.Claims.ClaimTypes.NameIdentifier)
+            ?.Value;
 
         if (string.IsNullOrEmpty(email))
         {
@@ -281,6 +294,8 @@ public class AuthController : ControllerBase
                 EmailConfirmed = true,
                 EmailConfirmedAt = DateTime.UtcNow,
                 CreatedAt = DateTime.UtcNow,
+                OAuthProvider = "Google",
+                OAuthId = googleId,
             };
 
             var createResult = await _userManager.CreateAsync(user);
@@ -303,6 +318,13 @@ public class AuthController : ControllerBase
             {
                 _logger.LogError(ex, "Failed to send welcome email to {Email}", user.Email);
             }
+        }
+        else if (string.IsNullOrEmpty(user.OAuthProvider))
+        {
+            // Link existing account to Google OAuth
+            user.OAuthProvider = "Google";
+            user.OAuthId = googleId;
+            await _userManager.UpdateAsync(user);
         }
 
         user.LastLoginAt = DateTime.UtcNow;
@@ -329,14 +351,22 @@ public class AuthController : ControllerBase
 
         var refreshTokenGoogle = await jwtService.GenerateRefreshTokenAsync(user);
 
+        var hasPassword = await _userManager.HasPasswordAsync(user);
+        var message =
+            user.CreatedAt == user.LastLoginAt
+                ? "Account created and logged in successfully"
+                : "Login successful";
+
+        if (!hasPassword)
+        {
+            message += ". Please set a password to enable standard login.";
+        }
+
         return Ok(
             new LoginResponseDto
             {
                 Success = true,
-                Message =
-                    user.CreatedAt == user.LastLoginAt
-                        ? "Account created and logged in successfully"
-                        : "Login successful",
+                Message = message,
                 Token = token,
                 RefreshToken = refreshTokenGoogle,
                 ExpiresAt = DateTime.UtcNow.AddHours(24),
@@ -394,6 +424,246 @@ public class AuthController : ControllerBase
                 Token = newToken,
                 RefreshToken = newRefreshToken,
                 ExpiresAt = DateTime.UtcNow.AddHours(24),
+            }
+        );
+    }
+
+    [HttpPost("forgot-password")]
+    public async Task<ActionResult<ForgotPasswordResponseDto>> ForgotPassword(
+        [FromBody] ForgotPasswordDto model
+    )
+    {
+        if (!ModelState.IsValid)
+        {
+            return BadRequest(ModelState);
+        }
+
+        // Rate limiting check
+        var clientIp = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+        var rateLimitKey = $"forgot_password_{clientIp}";
+
+        if (_rateLimitingService.IsRateLimited(rateLimitKey))
+        {
+            return BadRequest(
+                new ForgotPasswordResponseDto
+                {
+                    Success = false,
+                    Message = "Too many password reset requests. Please try again later.",
+                }
+            );
+        }
+
+        var user = await _userManager.FindByEmailAsync(model.Email);
+
+        // Always return the same message to prevent email enumeration
+        const string genericMessage =
+            "If this email exists, you will receive a password reset link.";
+
+        if (user != null)
+        {
+            // Generate JWT password reset token
+            var jwtService = HttpContext.RequestServices.GetRequiredService<IJwtService>();
+            var resetToken = jwtService.GeneratePasswordResetToken(user);
+
+            // Send password reset email
+            try
+            {
+                await _emailService.SendPasswordResetEmailAsync(user.Email!, resetToken);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to send password reset email to {Email}", user.Email);
+            }
+        }
+
+        return Ok(new ForgotPasswordResponseDto { Success = true, Message = genericMessage });
+    }
+
+    [HttpPost("reset-password")]
+    public async Task<ActionResult<ForgotPasswordResponseDto>> ResetPassword(
+        [FromBody] ResetPasswordDto model
+    )
+    {
+        if (!ModelState.IsValid)
+        {
+            return BadRequest(ModelState);
+        }
+
+        var jwtService = HttpContext.RequestServices.GetRequiredService<IJwtService>();
+
+        // Validate JWT reset token
+        if (!jwtService.ValidatePasswordResetToken(model.Token, out string userId))
+        {
+            return BadRequest(
+                new ForgotPasswordResponseDto
+                {
+                    Success = false,
+                    Message = "Invalid or expired reset token",
+                }
+            );
+        }
+
+        var user = await _userManager.FindByIdAsync(userId);
+        if (user == null)
+        {
+            return BadRequest(
+                new ForgotPasswordResponseDto { Success = false, Message = "User not found" }
+            );
+        }
+
+        // Reset password
+        var resetToken = await _userManager.GeneratePasswordResetTokenAsync(user);
+        var result = await _userManager.ResetPasswordAsync(user, resetToken, model.NewPassword);
+
+        if (!result.Succeeded)
+        {
+            var errors = string.Join(", ", result.Errors.Select(e => e.Description));
+            return BadRequest(
+                new ForgotPasswordResponseDto
+                {
+                    Success = false,
+                    Message = $"Password reset failed: {errors}",
+                }
+            );
+        }
+
+        // Invalidate all refresh tokens for security
+        var existingTokens = await _context
+            .RefreshTokens.Where(rt => rt.UserId == userId)
+            .ToListAsync();
+        _context.RefreshTokens.RemoveRange(existingTokens);
+        await _context.SaveChangesAsync();
+
+        // Get request metadata
+        var ipAddress = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "Unknown";
+        var userAgent = HttpContext.Request.Headers.UserAgent.ToString();
+
+        // Log security event
+        _logger.LogWarning(
+            "Password reset completed for user {UserId} from IP {IpAddress} using {UserAgent} at {Timestamp}",
+            userId,
+            ipAddress,
+            userAgent,
+            DateTime.UtcNow
+        );
+
+        // Send confirmation email
+        try
+        {
+            await _emailService.SendPasswordResetConfirmationAsync(
+                user.Email!,
+                user.FirstName,
+                ipAddress,
+                userAgent
+            );
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(
+                ex,
+                "Failed to send password reset confirmation email to {Email}",
+                user.Email
+            );
+        }
+
+        return Ok(
+            new ForgotPasswordResponseDto
+            {
+                Success = true,
+                Message =
+                    "Password has been reset successfully. All active sessions have been invalidated for security.",
+            }
+        );
+    }
+
+    [HttpPost("set-password")]
+    [Authorize]
+    public async Task<ActionResult<ForgotPasswordResponseDto>> SetPassword(
+        [FromBody] SetPasswordDto model
+    )
+    {
+        if (!ModelState.IsValid)
+        {
+            return BadRequest(ModelState);
+        }
+
+        var userId = User.FindFirst("sub")?.Value;
+        if (string.IsNullOrEmpty(userId))
+        {
+            return Unauthorized(
+                new ForgotPasswordResponseDto
+                {
+                    Success = false,
+                    Message = "User not authenticated",
+                }
+            );
+        }
+
+        var user = await _userManager.FindByIdAsync(userId);
+        if (user == null)
+        {
+            return BadRequest(
+                new ForgotPasswordResponseDto { Success = false, Message = "User not found" }
+            );
+        }
+
+        // Check if user already has a password
+        var hasPassword = await _userManager.HasPasswordAsync(user);
+        if (hasPassword)
+        {
+            return BadRequest(
+                new ForgotPasswordResponseDto
+                {
+                    Success = false,
+                    Message = "Password already set. Use change password instead.",
+                }
+            );
+        }
+
+        // Add password to OAuth user
+        var result = await _userManager.AddPasswordAsync(user, model.NewPassword);
+        if (!result.Succeeded)
+        {
+            var errors = string.Join(", ", result.Errors.Select(e => e.Description));
+            return BadRequest(
+                new ForgotPasswordResponseDto
+                {
+                    Success = false,
+                    Message = $"Failed to set password: {errors}",
+                }
+            );
+        }
+
+        // Log security event
+        var ipAddress = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "Unknown";
+        var userAgent = HttpContext.Request.Headers.UserAgent.ToString();
+
+        _logger.LogInformation(
+            "Password set for OAuth user {UserId} from IP {IpAddress} at {Timestamp}",
+            userId,
+            ipAddress,
+            DateTime.UtcNow
+        );
+
+        // Send account setup confirmation email
+        try
+        {
+            await _emailService.SendPasswordSetConfirmationAsync(user.Email!, user.FirstName);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(
+                ex,
+                "Failed to send password set confirmation email to {Email}",
+                user.Email
+            );
+        }
+
+        return Ok(
+            new ForgotPasswordResponseDto
+            {
+                Success = true,
+                Message = "Password set successfully. You can now login with email and password.",
             }
         );
     }
