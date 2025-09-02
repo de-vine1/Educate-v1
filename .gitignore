@@ -36,6 +36,8 @@ ScaffoldingReadMe.txt
 .vs
 new.txt
 .vscode
+google.json
+
 
 # NuGet Packages
 *.nupkg

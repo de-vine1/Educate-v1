@@ -60,6 +60,22 @@ public class SmtpEmailService : IEmailService
         await SendEmailAsync(toEmail, subject, message);
     }
 
+    public async Task SendEmailConfirmationAsync(string toEmail, string userName, string confirmationToken)
+    {
+        var subject = "Confirm Your Email Address";
+        var message = $"Hello {userName},\n\nPlease confirm your email address by clicking the link below:\n\n/confirm-email?token={confirmationToken}\n\nThis link will expire in 24 hours.";
+
+        await SendEmailAsync(toEmail, subject, message);
+    }
+
+    public async Task SendLoginNotificationAsync(string toEmail, string userName, string ipAddress, string userAgent)
+    {
+        var subject = "Login Notification";
+        var message = $"Hello {userName},\n\nYour account was accessed from:\nIP: {ipAddress}\nDevice: {userAgent}\nTime: {DateTime.UtcNow:yyyy-MM-dd HH:mm:ss} UTC\n\nIf this wasn't you, please secure your account immediately.";
+
+        await SendEmailAsync(toEmail, subject, message);
+    }
+
     public void Dispose()
     {
         _smtpClient?.Dispose();

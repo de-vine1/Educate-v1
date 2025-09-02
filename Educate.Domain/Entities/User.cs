@@ -11,7 +11,8 @@ public class User : IdentityUser
     public string? SubscriptionStatus { get; set; }
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime? LastLoginAt { get; set; }
-    
+    public DateTime? EmailConfirmedAt { get; set; }
+
     public ICollection<Subscription> Subscriptions { get; set; } = new List<Subscription>();
     public ICollection<Payment> Payments { get; set; } = new List<Payment>();
     public ICollection<TestResult> TestResults { get; set; } = new List<TestResult>();
