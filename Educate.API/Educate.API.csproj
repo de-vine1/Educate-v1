@@ -1,0 +1,26 @@
+﻿<Project Sdk="Microsoft.NET.Sdk.Web">
+  <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <UserSecretsId>1ed974ca-0199-4ff4-bab0-e78163f6eed4</UserSecretsId>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="9.0.7" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="9.0.1" />
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="9.0.0" />
+    <PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="9.0.0" />
+    <PackageReference Include="Swashbuckle.AspNetCore" Version="7.2.0" />
+    <PackageReference Include="Serilog.AspNetCore" Version="9.0.0" />
+    <PackageReference Include="AspNetCoreRateLimit" Version="5.0.0" />
+    <PackageReference Include="Serilog.Sinks.Console" Version="6.0.0" />
+    <PackageReference Include="Serilog.Sinks.File" Version="6.0.0" />
+    <PackageReference Include="Microsoft.AspNetCore.DataProtection" Version="9.0.0" />
+    <PackageReference Include="Microsoft.AspNetCore.DataProtection.Extensions" Version="9.0.0" />
+    <PackageReference Include="SendGrid" Version="9.29.3" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Educate.Application\Educate.Application.csproj" />
+    <ProjectReference Include="..\Educate.Infrastructure\Educate.Infrastructure.csproj" />
+  </ItemGroup>
+</Project>
