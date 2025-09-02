@@ -98,4 +98,63 @@ public class JwtService : IJwtService
 
         return true;
     }
+
+    public string GeneratePasswordResetToken(User user)
+    {
+        var claims = new List<Claim>
+        {
+            new(JwtRegisteredClaimNames.Sub, user.Id),
+            new(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
+            new("purpose", "password-reset"),
+        };
+
+        var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_configuration["Jwt:Key"]!));
+        var credentials = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
+
+        var token = new JwtSecurityToken(
+            issuer: _configuration["Jwt:Issuer"],
+            audience: _configuration["Jwt:Audience"],
+            claims: claims,
+            expires: DateTime.UtcNow.AddMinutes(30),
+            signingCredentials: credentials
+        );
+
+        return new JwtSecurityTokenHandler().WriteToken(token);
+    }
+
+    public bool ValidatePasswordResetToken(string token, out string userId)
+    {
+        userId = string.Empty;
+
+        try
+        {
+            var handler = new JwtSecurityTokenHandler();
+            var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_configuration["Jwt:Key"]!));
+
+            var validationParameters = new TokenValidationParameters
+            {
+                ValidateIssuer = true,
+                ValidateAudience = true,
+                ValidateLifetime = true,
+                ValidateIssuerSigningKey = true,
+                ValidIssuer = _configuration["Jwt:Issuer"],
+                ValidAudience = _configuration["Jwt:Audience"],
+                IssuerSigningKey = key,
+                ClockSkew = TimeSpan.Zero,
+            };
+
+            var principal = handler.ValidateToken(token, validationParameters, out _);
+            var purposeClaim = principal.FindFirst("purpose")?.Value;
+
+            if (purposeClaim != "password-reset")
+                return false;
+
+            userId = principal.FindFirst(JwtRegisteredClaimNames.Sub)?.Value ?? string.Empty;
+            return !string.IsNullOrEmpty(userId);
+        }
+        catch
+        {
+            return false;
+        }
+    }
 }

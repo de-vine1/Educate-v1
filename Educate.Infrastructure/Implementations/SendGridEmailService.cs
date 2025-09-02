@@ -44,8 +44,25 @@ public class SendGridEmailService : IEmailService
 
     public async Task SendPasswordResetEmailAsync(string toEmail, string resetToken)
     {
-        var subject = "Password Reset Request";
-        var message = $"Click the link to reset your password: /reset-password?token={resetToken}";
+        var subject = "Password Reset Request - Educate Platform";
+        var resetLink = $"https://educate.com/reset-password?token={resetToken}";
+
+        var message =
+            $@"Hello,
+
+            You have requested to reset your password for your Educate Platform account.
+
+            Click the link below to reset your password:
+            {resetLink}
+
+            This link will expire in 30 minutes for security reasons.
+
+            If you did not request this password reset, please ignore this email and contact our support team immediately.
+
+            Support Contact: support@educate.com
+
+            Best regards,
+            Educate Platform Team";
 
         await SendEmailAsync(toEmail, subject, message);
     }
@@ -73,6 +90,30 @@ public class SendGridEmailService : IEmailService
         var subject = "Login Notification";
         var message =
             $"Hello {userName},\n\nYour account was accessed from:\nIP: {ipAddress}\nDevice: {userAgent}\nTime: {DateTime.UtcNow:yyyy-MM-dd HH:mm:ss} UTC\n\nIf this wasn't you, please secure your account immediately.";
+
+        await SendEmailAsync(toEmail, subject, message);
+    }
+
+    public async Task SendPasswordResetConfirmationAsync(
+        string toEmail,
+        string userName,
+        string ipAddress,
+        string userAgent
+    )
+    {
+        var subject = "Password Reset Successful - Educate Platform";
+        var message =
+            $"Hello {userName},\n\nYour password has been successfully reset.\n\nReset Details:\nIP Address: {ipAddress}\nDevice: {userAgent}\nTime: {DateTime.UtcNow:yyyy-MM-dd HH:mm:ss} UTC\n\nIf you did not perform this action, please contact support immediately.\n\nSupport: support@educate.com\n\nBest regards,\nEducate Platform Team";
+
+        await SendEmailAsync(toEmail, subject, message);
+    }
+
+    public async Task SendPasswordSetConfirmationAsync(string toEmail, string userName)
+    {
+        var subject = "Account Setup Complete - Educate Platform";
+        var loginLink = "https://educate.com/login";
+        var message =
+            $"Hello {userName},\n\nGreat news! Your account setup is now complete.\n\nYou have successfully set your password and can now login using either:\n• Your email and password\n• Google OAuth\n\nLogin here: {loginLink}\n\nWelcome to the Educate Platform!\n\nBest regards,\nEducate Platform Team";
 
         await SendEmailAsync(toEmail, subject, message);
     }
