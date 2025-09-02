@@ -14,6 +14,8 @@ public static class EmailExtensions
         var apiKey = configuration["SendGrid:ApiKey"];
         services.AddSingleton<ISendGridClient>(_ => new SendGridClient(apiKey));
         services.AddScoped<IEmailService, SendGridEmailService>();
+        services.AddScoped<IUserValidationService, UserValidationService>();
+        services.AddScoped<IJwtService, JwtService>();
 
         return services;
     }

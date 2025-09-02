@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Google OAuth Test</title>
+</head>
+<body>
+    <h1>Google OAuth Test</h1>
+    <button onclick="window.location.href='/api/auth/google-login'">Login with Google</button>
+    
+    <div id="result"></div>
+    
+    <script>
+        // Check if we have a token in the URL (after redirect)
+        const urlParams = new URLSearchParams(window.location.search);
+        const token = urlParams.get('token');
+        if (token) {
+            document.getElementById('result').innerHTML = `<h3>Success!</h3><p>Token: ${token}</p>`;
+        }
+    </script>
+</body>
+</html>

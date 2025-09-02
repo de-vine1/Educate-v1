@@ -14,6 +14,7 @@ builder.Services.AddControllers();
 builder.Services.AddDatabase(builder.Configuration);
 builder.Services.AddIdentityServices();
 builder.Services.AddJwtAuthentication(builder.Configuration);
+builder.Services.AddGoogleAuthentication(builder.Configuration);
 builder.Services.AddAuthorizationPolicies();
 builder.Services.AddSwaggerWithJwt();
 builder.Services.AddCorsPolicy(builder.Configuration);
@@ -42,6 +43,7 @@ app.UseSwaggerUI(c =>
 
 app.UseMiddleware<RequestResponseLoggingMiddleware>();
 app.UseHttpsRedirection();
+app.UseStaticFiles();
 app.UseCors("DefaultPolicy");
 app.UseAuthentication();
 app.UseAuthorization();

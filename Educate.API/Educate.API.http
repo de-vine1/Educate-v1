@@ -4,3 +4,50 @@ GET {{Educate.API_HostAddress}}/weatherforecast/
 Accept: application/json
 
 ###
+
+# User Registration
+POST {{Educate.API_HostAddress}}/api/auth/register
+Content-Type: application/json
+
+{
+  "firstName": "John",
+  "lastName": "Doe",
+  "username": "johndoe",
+  "email": "john.doe@example.com",
+  "password": "SecurePass123",
+  "confirmPassword": "SecurePass123"
+}
+
+###
+
+# Email Confirmation (use token from email)
+GET {{Educate.API_HostAddress}}/api/auth/confirm-email?token=CfDJ8AUQ+BGMVRZGupHbFXWJnYJTE2HeMvKDI4qy0xnhzNPBCpdUYeDUYL9E9SLHr6l98pT+B7tCqgynW0++HHUVs0wjERull/XFd731qDmwFnXwZl25jY2pDzxU8ja+3eShQrwrN7sTAeojoufsm2M43nfhsQSv4Wv3E2aPIAMZKxazzcLry9Z2BANmFO2mlDWsnSt8AZqPqbpaGZCi4AxRwlWjzXZaaW0WODThg+YjuvjUyjdhf6Ui89P8WwwNNI1W9Q==
+
+###
+
+# User Login
+POST {{Educate.API_HostAddress}}/api/auth/login
+Content-Type: application/json
+
+{
+  "emailOrUsername": "audu@example.com",
+  "password": "SecurePass123"
+}
+
+###
+
+# Google OAuth Login (redirect to Google)
+GET {{Educate.API_HostAddress}}/api/auth/google-login
+
+###
+
+# Refresh Token
+POST {{Educate.API_HostAddress}}/api/auth/refresh-token
+Content-Type: application/json
+
+{
+  "token": "your-expired-jwt-token",
+  "refreshToken": "your-refresh-token"
+}
+
+###
