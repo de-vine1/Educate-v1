@@ -19,4 +19,5 @@ public interface IEmailService
         string userAgent
     );
     Task SendPasswordSetConfirmationAsync(string toEmail, string userName);
+    Task SendEmailWithAttachmentAsync(string to, string subject, string body, byte[] attachment, string fileName);
 }

@@ -22,48 +22,26 @@ public class CourseController : ControllerBase
     public async Task<IActionResult> GetCourses()
     {
         var courses = await _context
-            .Courses.Where(c => c.IsActive)
+            .Courses.Include(c => c.Levels)
+            .ThenInclude(l => l.Subjects)
             .Select(c => new
             {
-                c.Id,
+                c.CourseId,
                 c.Name,
                 c.Description,
-                c.AnnualPrice,
+                c.CreatedAt,
+                Levels = c
+                    .Levels.OrderBy(l => l.Order)
+                    .Select(l => new
+                    {
+                        l.LevelId,
+                        l.Name,
+                        l.Order,
+                        SubjectCount = l.Subjects.Count(),
+                    }),
             })
             .ToListAsync();
 
         return Ok(courses);
-    }
-
-    [HttpPost("{courseId}/subscribe")]
-    [Authorize]
-    public async Task<IActionResult> Subscribe(int courseId)
-    {
-        var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-
-        var existingSubscription = await _context.Subscriptions.AnyAsync(s =>
-            s.UserId == userId && s.CourseId == courseId && s.IsActive
-        );
-
-        if (existingSubscription)
-            return BadRequest("Already subscribed to this course");
-
-        var course = await _context.Courses.FindAsync(courseId);
-        if (course == null)
-            return NotFound();
-
-        var subscription = new Subscription
-        {
-            UserId = userId!,
-            CourseId = courseId,
-            StartDate = DateTime.UtcNow,
-            EndDate = DateTime.UtcNow.AddYears(1),
-            AmountPaid = course.AnnualPrice,
-        };
-
-        _context.Subscriptions.Add(subscription);
-        await _context.SaveChangesAsync();
-
-        return Ok(new { message = "Subscription created successfully" });
     }
 }

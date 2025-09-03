@@ -1,5 +1,9 @@
+using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
+using Educate.Application.Interfaces;
+using Educate.Application.Models.DTOs;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Educate.API.Controllers;
@@ -10,11 +14,35 @@ public class PaymentController : ControllerBase
 {
     private readonly ILogger<PaymentController> _logger;
     private readonly IConfiguration _configuration;
+    private readonly IPaymentService _paymentService;
 
-    public PaymentController(ILogger<PaymentController> logger, IConfiguration configuration)
+    public PaymentController(
+        ILogger<PaymentController> logger,
+        IConfiguration configuration,
+        IPaymentService paymentService
+    )
     {
         _logger = logger;
         _configuration = configuration;
+        _paymentService = paymentService;
+    }
+
+    [HttpPost("initialize")]
+    [Authorize]
+    public async Task<IActionResult> InitializePayment(
+        [FromBody] PaymentInitializationRequest request
+    )
+    {
+        var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        if (string.IsNullOrEmpty(userId))
+            return Unauthorized();
+
+        var result = await _paymentService.InitializePaymentAsync(userId, request);
+
+        if (!result.Success)
+            return BadRequest(result);
+
+        return Ok(result);
     }
 
     [HttpPost("paystack/webhook")]
@@ -23,61 +51,47 @@ public class PaymentController : ControllerBase
         var signature = Request.Headers["x-paystack-signature"].FirstOrDefault();
         var body = await new StreamReader(Request.Body).ReadToEndAsync();
 
-        if (!VerifyPaystackSignature(body, signature))
+        var processed = await _paymentService.ProcessPaystackWebhookAsync(
+            signature ?? string.Empty,
+            body
+        );
+
+        if (!processed)
+        {
+            _logger.LogWarning("Invalid Paystack webhook signature");
             return Unauthorized();
+        }
 
-        _logger.LogInformation("Paystack webhook received: {Body}", body);
-        // Process payment logic here
-
+        _logger.LogInformation("Paystack webhook processed successfully");
         return Ok();
     }
 
-    [HttpPost("stripe/webhook")]
-    public async Task<IActionResult> StripeWebhook()
+    [HttpPost("monnify/webhook")]
+    public async Task<IActionResult> MonnifyWebhook()
     {
-        var signature = Request.Headers["stripe-signature"].FirstOrDefault();
+        // IP Whitelisting for Monnify
+        var clientIp = Request.HttpContext.Connection.RemoteIpAddress?.ToString();
+        if (clientIp != "35.242.133.146" && clientIp != "::ffff:35.242.133.146")
+        {
+            _logger.LogWarning("Unauthorized IP attempting Monnify webhook: {IP}", clientIp);
+            return Unauthorized();
+        }
+
+        var signature = Request.Headers["monnify-signature"].FirstOrDefault();
         var body = await new StreamReader(Request.Body).ReadToEndAsync();
 
-        if (!VerifyStripeSignature(body, signature))
+        var processed = await _paymentService.ProcessMonnifyWebhookAsync(
+            signature ?? string.Empty,
+            body
+        );
+
+        if (!processed)
+        {
+            _logger.LogWarning("Invalid Monnify webhook signature");
             return Unauthorized();
+        }
 
-        _logger.LogInformation("Stripe webhook received: {Body}", body);
-        // Process payment logic here
-
+        _logger.LogInformation("Monnify webhook processed successfully");
         return Ok();
-    }
-
-    private bool VerifyPaystackSignature(string body, string? signature)
-    {
-        if (string.IsNullOrEmpty(signature))
-            return false;
-
-        var secret = _configuration["Payment:Paystack:WebhookSecret"];
-        var hash = ComputeHmacSha512(body, secret!);
-        return hash.Equals(signature, StringComparison.OrdinalIgnoreCase);
-    }
-
-    private bool VerifyStripeSignature(string body, string? signature)
-    {
-        if (string.IsNullOrEmpty(signature))
-            return false;
-
-        var secret = _configuration["Payment:Stripe:WebhookSecret"];
-        var hash = ComputeHmacSha256(body, secret!);
-        return signature.Contains(hash);
-    }
-
-    private static string ComputeHmacSha512(string data, string key)
-    {
-        using var hmac = new HMACSHA512(Encoding.UTF8.GetBytes(key));
-        var hash = hmac.ComputeHash(Encoding.UTF8.GetBytes(data));
-        return Convert.ToHexString(hash).ToLower();
-    }
-
-    private static string ComputeHmacSha256(string data, string key)
-    {
-        using var hmac = new HMACSHA256(Encoding.UTF8.GetBytes(key));
-        var hash = hmac.ComputeHash(Encoding.UTF8.GetBytes(data));
-        return Convert.ToHexString(hash).ToLower();
     }
 }

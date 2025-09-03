@@ -11,11 +11,15 @@ public class AppDbContext : IdentityDbContext<User>
 
     public DbSet<RefreshToken> RefreshTokens { get; set; } = null!;
     public DbSet<Course> Courses { get; set; } = null!;
+    public DbSet<Level> Levels { get; set; } = null!;
+    public DbSet<Subject> Subjects { get; set; } = null!;
+    public DbSet<UserCourse> UserCourses { get; set; } = null!;
+    public DbSet<Notification> Notifications { get; set; } = null!;
     public DbSet<Subscription> Subscriptions { get; set; } = null!;
     public DbSet<Payment> Payments { get; set; } = null!;
+    public DbSet<Receipt> Receipts { get; set; } = null!;
     public DbSet<PracticeMaterial> PracticeMaterials { get; set; } = null!;
     public DbSet<Test> Tests { get; set; } = null!;
-    public DbSet<TestResult> TestResults { get; set; } = null!;
     public DbSet<AuditLog> AuditLogs { get; set; } = null!;
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)

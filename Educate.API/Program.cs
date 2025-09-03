@@ -21,6 +21,8 @@ builder.Services.AddCorsPolicy(builder.Configuration);
 builder.Services.AddRateLimiting(builder.Configuration);
 builder.Services.AddSecurityServices();
 builder.Services.AddEmailServices(builder.Configuration);
+builder.Services.AddPaymentServices(builder.Configuration);
+builder.Services.AddHostedService<Educate.Infrastructure.Services.SubscriptionBackgroundService>();
 
 var app = builder.Build();
 

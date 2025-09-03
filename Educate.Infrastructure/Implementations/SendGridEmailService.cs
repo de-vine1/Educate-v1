@@ -117,4 +117,28 @@ public class SendGridEmailService : IEmailService
 
         await SendEmailAsync(toEmail, subject, message);
     }
+
+    public async Task SendEmailWithAttachmentAsync(
+        string to,
+        string subject,
+        string body,
+        byte[] attachment,
+        string fileName
+    )
+    {
+        var from = new EmailAddress(_senderEmail, _senderName);
+        var toEmail = new EmailAddress(to);
+        var msg = MailHelper.CreateSingleEmail(from, toEmail, subject, body, body);
+
+        var attachmentBase64 = Convert.ToBase64String(attachment);
+        msg.AddAttachment(fileName, attachmentBase64, "application/pdf");
+
+        var response = await _sendGridClient.SendEmailAsync(msg);
+
+        if (response.StatusCode != System.Net.HttpStatusCode.Accepted)
+        {
+            var responseBody = await response.Body.ReadAsStringAsync();
+            throw new Exception($"SendGrid failed: {response.StatusCode} - {responseBody}");
+        }
+    }
 }

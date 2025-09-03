@@ -12,6 +12,8 @@ public static class SecurityExtensions
         services.AddScoped<IEncryptionService, EncryptionService>();
         services.AddScoped<IAuditService, AuditService>();
         services.AddScoped<IPaymentService, PaymentService>();
+        services.AddScoped<IReceiptService, ReceiptService>();
+        services.AddScoped<ISubscriptionService, SubscriptionService>();
 
         services.AddAntiforgery(options =>
         {

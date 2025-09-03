@@ -1,17 +1,42 @@
+using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
+
 namespace Educate.Domain.Entities;
 
 public class Payment
 {
-    public int Id { get; set; }
+    [Key]
+    public Guid PaymentId { get; set; } = Guid.NewGuid();
+
+    [Required]
     public string UserId { get; set; } = string.Empty;
-    public int CourseId { get; set; }
+
+    public Guid? CourseId { get; set; }
+    public Guid? LevelId { get; set; }
     public decimal Amount { get; set; }
-    public string PaymentMethod { get; set; } = string.Empty; // Paystack, Stripe, etc.
-    public string TransactionId { get; set; } = string.Empty;
-    public string? EncryptedCardToken { get; set; }
-    public string Status { get; set; } = string.Empty; // Pending, Success, Failed
+
+    [Required]
+    [MaxLength(50)]
+    public string Provider { get; set; } = string.Empty; // Paystack, Monnify
+
+    [Required]
+    public string Reference { get; set; } = string.Empty; // Unique payment reference
+
+    [Required]
+    [MaxLength(20)]
+    public string Status { get; set; } = "Pending"; // Pending, Success, Failed
+
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
-    public User User { get; set; } = null!;
-    public Course Course { get; set; } = null!;
+    // Navigation properties
+    [ForeignKey("UserId")]
+    public virtual User User { get; set; } = null!;
+
+    [ForeignKey("CourseId")]
+    public virtual Course? Course { get; set; }
+
+    [ForeignKey("LevelId")]
+    public virtual Level? Level { get; set; }
+
+    public virtual UserCourse? UserCourse { get; set; }
 }

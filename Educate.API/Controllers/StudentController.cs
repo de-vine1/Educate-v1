@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using Educate.Application.Interfaces;
 using Educate.Infrastructure.Database;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -12,10 +13,12 @@ namespace Educate.API.Controllers;
 public class StudentController : ControllerBase
 {
     private readonly AppDbContext _context;
+    private readonly ISubscriptionService _subscriptionService;
 
-    public StudentController(AppDbContext context)
+    public StudentController(AppDbContext context, ISubscriptionService subscriptionService)
     {
         _context = context;
+        _subscriptionService = subscriptionService;
     }
 
     [HttpGet("profile")]
@@ -43,38 +46,37 @@ public class StudentController : ControllerBase
     public async Task<IActionResult> GetSubscriptions()
     {
         var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-        var subscriptions = await _context
-            .Subscriptions.Include(s => s.Course)
-            .Where(s => s.UserId == userId && s.IsActive)
-            .Select(s => new
-            {
-                s.Id,
-                CourseName = s.Course.Name,
-                s.StartDate,
-                s.EndDate,
-                s.IsActive,
-            })
-            .ToListAsync();
+        if (string.IsNullOrEmpty(userId))
+            return Unauthorized();
 
+        var subscriptions = await _subscriptionService.GetUserActiveSubscriptionsAsync(userId);
         return Ok(subscriptions);
     }
 
-    [HttpGet("materials/{courseId}")]
-    public async Task<IActionResult> GetMaterials(int courseId)
+    [HttpGet("materials/{courseId}/{levelId}")]
+    public async Task<IActionResult> GetMaterials(Guid courseId, Guid levelId)
     {
         var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-        var hasSubscription = await _context.Subscriptions.AnyAsync(s =>
-            s.UserId == userId && s.CourseId == courseId && s.IsActive
+        if (string.IsNullOrEmpty(userId))
+            return Unauthorized();
+
+        var hasSubscription = await _subscriptionService.HasActiveSubscriptionAsync(
+            userId,
+            courseId,
+            levelId
         );
 
         var materials = await _context
-            .PracticeMaterials.Where(m => m.CourseId == courseId && (m.IsFree || hasSubscription))
+            .PracticeMaterials.Where(m =>
+                m.CourseId == courseId && m.LevelId == levelId && (m.IsFree || hasSubscription)
+            )
             .Select(m => new
             {
                 m.Id,
                 m.Title,
                 m.Content,
                 m.IsFree,
+                HasAccess = m.IsFree || hasSubscription,
             })
             .ToListAsync();
 
@@ -86,16 +88,14 @@ public class StudentController : ControllerBase
     {
         var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
         var results = await _context
-            .TestResults.Include(r => r.Test)
-            .ThenInclude(t => t.Course)
-            .Where(r => r.UserId == userId)
-            .Select(r => new
+            .Tests.Include(t => t.Course)
+            .Select(t => new
             {
-                r.Id,
-                TestTitle = r.Test.Title,
-                CourseName = r.Test.Course.Name,
-                r.Score,
-                r.CompletedAt,
+                t.Id,
+                TestTitle = t.Title,
+                CourseName = t.Course.Name,
+                Duration = t.Duration,
+                CreatedAt = t.CreatedAt,
             })
             .ToListAsync();
 

@@ -3,21 +3,22 @@ using System.ComponentModel.DataAnnotations.Schema;
 
 namespace Educate.Domain.Entities;
 
-public class Course
+public class Subject
 {
     [Key]
-    public Guid CourseId { get; set; } = Guid.NewGuid();
-
+    public Guid SubjectId { get; set; } = Guid.NewGuid();
+    
+    [Required]
+    public Guid LevelId { get; set; }
+    
     [Required]
     [MaxLength(200)]
     public string Name { get; set; } = string.Empty;
-
-    [MaxLength(1000)]
-    public string Description { get; set; } = string.Empty;
-
+    
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 
     // Navigation property
-    public virtual ICollection<Level> Levels { get; set; } = new List<Level>();
+    [ForeignKey("LevelId")]
+    public virtual Level Level { get; set; } = null!;
 }
