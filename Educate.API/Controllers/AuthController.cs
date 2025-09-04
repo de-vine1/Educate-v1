@@ -667,4 +667,46 @@ public class AuthController : ControllerBase
             }
         );
     }
+
+    [HttpPost("logout")]
+    [Authorize]
+    public async Task<ActionResult<LogoutResponseDto>> Logout([FromBody] LogoutDto model)
+    {
+        if (!ModelState.IsValid)
+        {
+            return BadRequest(ModelState);
+        }
+
+        var userId = User.FindFirst("sub")?.Value;
+        if (string.IsNullOrEmpty(userId))
+        {
+            return Unauthorized(
+                new LogoutResponseDto { Success = false, Message = "User not authenticated" }
+            );
+        }
+
+        // Revoke the specific refresh token
+        var refreshToken = await _context.RefreshTokens.FirstOrDefaultAsync(rt =>
+            rt.UserId == userId && rt.Token == model.RefreshToken
+        );
+
+        if (refreshToken != null)
+        {
+            refreshToken.IsRevoked = true;
+            await _context.SaveChangesAsync();
+        }
+
+        // Log security event
+        var ipAddress = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "Unknown";
+        var userAgent = HttpContext.Request.Headers.UserAgent.ToString();
+
+        _logger.LogInformation(
+            "User {UserId} logged out from IP {IpAddress} at {Timestamp}",
+            userId,
+            ipAddress,
+            DateTime.UtcNow
+        );
+
+        return Ok(new LogoutResponseDto { Success = true, Message = "Logged out successfully" });
+    }
 }

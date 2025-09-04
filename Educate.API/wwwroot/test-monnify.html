@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Monnify Integration</title>
+    <script type="text/javascript" src="https://sdk.monnify.com/plugin/monnify.js"></script>
+</head>
+<body>
+    <h1>Test Monnify Payment</h1>
+    <button type="button" onclick="payWithMonnify()">Pay With Monnify (Test)</button>
+
+    <script>
+        function payWithMonnify() {
+            MonnifySDK.initialize({
+                amount: 50, // 50 Naira for testing
+                currency: "NGN",
+                reference: "EDU_TEST_" + new Date().getTime(),
+                customerFullName: "Test User",
+                customerEmail: "test@educate.com",
+                apiKey: "MK_TEST_2XAPMNQD8M", // Your test API key
+                contractCode: "1248489039", // Your contract code
+                paymentDescription: "Educate Platform Test Payment",
+                paymentMethods: ["CARD", "ACCOUNT_TRANSFER", "USSD", "PHONE_NUMBER"],
+                onLoadStart: () => {
+                    console.log("Monnify SDK loading started");
+                },
+                onLoadComplete: () => {
+                    console.log("Monnify SDK loaded successfully");
+                },
+                onComplete: function (response) {
+                    console.log("Payment completed:", response);
+                    alert("Payment completed! Check console for details.");
+                },
+                onClose: function (data) {
+                    console.log("Payment modal closed:", data);
+                    alert("Payment modal closed. Check console for details.");
+                }
+            });
+        }
+    </script>
+</body>
+</html>

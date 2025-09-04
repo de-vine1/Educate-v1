@@ -11,6 +11,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Educate.Domain", "Educate.D
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Educate.Infrastructure", "Educate.Infrastructure\Educate.Infrastructure.csproj", "{696B39E7-A00B-4AAC-B267-0FF91441D583}"
 EndProject
+
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -69,6 +70,7 @@ Global
 		{696B39E7-A00B-4AAC-B267-0FF91441D583}.Release|x64.Build.0 = Release|Any CPU
 		{696B39E7-A00B-4AAC-B267-0FF91441D583}.Release|x86.ActiveCfg = Release|Any CPU
 		{696B39E7-A00B-4AAC-B267-0FF91441D583}.Release|x86.Build.0 = Release|Any CPU
+
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

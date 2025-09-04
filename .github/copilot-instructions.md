@@ -1,415 +1,328 @@
-# AI Coding Instructions for Educate Platform
-
-## Architecture Overview
-
-This is a **Clean Architecture** .NET 9 educational platform with four layers:
-- **Educate.API**: Web API controllers, middleware, extensions, configuration
-- **Educate.Application**: Application services, DTOs, interfaces (business logic contracts)
-- **Educate.Domain**: Domain entities, value objects, domain exceptions
-- **Educate.Infrastructure**: Data access, external services, implementations
-
-**Key Data Flow**: Controllers → Application Interfaces → Infrastructure Implementations → Database (PostgreSQL)
-
-## Core Domain Model
-
-The platform centers around a **Course → Level → Subject → Test** hierarchy:
-- **User** (extends IdentityUser): Student accounts with subscription management
-- **Course**: Top-level educational programs (e.g., "ATS Examination", "ICAN Examination")
-- **Level**: Course subdivisions (e.g., ATS1, ATS2, Foundation, Skills)  
-- **Subject**: Specific topics within levels
-- **Subscription**: User access management with expiration tracking
-- **Payment**: Paystack/Monnify integration for subscription billing
-
-## Your Established Coding Patterns
-
-### Controller Standards
-```csharp
-[ApiController]
-[Route("api/[controller]")]
-[Authorize(Policy = "AdminOnly")] // When role-based
-public class AdminController : ControllerBase
-{
-    private readonly AppDbContext _context;
-    private readonly IAuditService _auditService;
-
-    // Always validate ModelState first
-    if (!ModelState.IsValid)
-        return BadRequest(ModelState);
-
-    // Use strongly-typed DTOs for responses
-    return Ok(new LoginResponseDto 
-    { 
-        Success = true, 
-        Message = "Login successful",
-        Token = token 
-    });
-}
-```
-
-### Your Error Handling Pattern
-```csharp
-// Consistent error response structure
-return BadRequest(new RegisterResponseDto 
-{ 
-    Success = false, 
-    Message = "Username already exists" 
-});
-
-// Always use null-coalescing for metadata
-var ipAddress = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "Unknown";
-var userAgent = HttpContext.Request.Headers.UserAgent.ToString();
-```
-
-### Your Service Implementation Pattern
-```csharp
-public class PaymentService : IPaymentService
-{
-    private readonly AppDbContext _context;
-    private readonly IEncryptionService _encryptionService;
-    private readonly IConfiguration _configuration;
-
-    // Constructor injection with all dependencies
-    public PaymentService(AppDbContext context, IEncryptionService encryptionService, /*...*/)
-    {
-        _context = context;
-        _encryptionService = encryptionService;
-    }
-
-    // Switch expressions for provider selection
-    return request.PaymentProvider.ToLower() switch
-    {
-        "paystack" => await InitializePaystackPayment(/*...*/),
-        "monnify" => await InitializeMonnifyPayment(/*...*/),
-        _ => new PaymentInitializationResponse { Success = false, Message = "Invalid provider" }
-    };
-}
-```
-
-### Your EF Core Query Patterns
-```csharp
-// Always use Include for navigation properties
-var course = await _context.Courses
-    .Include(c => c.Levels)
-    .ThenInclude(l => l.Subjects)
-    .FirstOrDefaultAsync(c => c.CourseId == id);
-
-// Anonymous projections for API responses
-var courses = await _context.Courses
-    .Select(c => new
-    {
-        c.CourseId,
-        c.Name,
-        c.Description,
-        LevelCount = c.Levels.Count()
-    })
-    .ToListAsync();
-```
-
-### Your Audit Logging Standard
-```csharp
-// Manual audit logging in controllers
-var userId = User.FindFirst("sub")?.Value ?? "Unknown";
-var ipAddress = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "Unknown";
-var userAgent = HttpContext.Request.Headers.UserAgent.ToString();
-await _auditService.LogAsync(userId, "CREATE_COURSE", $"Created course: {course.Name}", ipAddress, userAgent);
-```
-
-### Your Validation Patterns
-```csharp
-// Database uniqueness checks before operations
-if (await _context.Courses.AnyAsync(c => c.Name.ToLower() == dto.Name.ToLower()))
-    return BadRequest("A course with this name already exists.");
-
-// Identity operations with error aggregation
-if (!result.Succeeded)
-{
-    var errors = string.Join(", ", result.Errors.Select(e => e.Description));
-    return BadRequest(new RegisterResponseDto 
-    { 
-        Success = false, 
-        Message = $"Registration failed: {errors}" 
-    });
-}
-```
-
-## Project-Specific Patterns
-
-### Extension-Based Service Registration
-Services are registered via extension methods in `Educate.API/Extensions/`:
-```csharp
-builder.Services.AddDatabase(builder.Configuration);
-builder.Services.AddIdentityServices();
-builder.Services.AddJwtAuthentication(builder.Configuration);
-```
-Each extension encapsulates complex service setup (e.g., `DatabaseExtensions.cs` configures EF Core with PostgreSQL).
-
-### Middleware Pipeline Order (Critical)
-```csharp
-app.UseMiddleware<SecurityHeadersMiddleware>();
-app.UseMiddleware<GlobalExceptionMiddleware>();
-app.UseMiddleware<RequestValidationMiddleware>();
-app.UseMiddleware<AuditMiddleware>();
-app.UseIpRateLimiting();
-// ... followed by standard ASP.NET middleware
-```
-
-### Service Layer Pattern
-Controllers inject application interfaces, implementations live in Infrastructure:
-- Interface: `Educate.Application.Interfaces.ISubscriptionService`
-- Implementation: `Educate.Infrastructure.Implementations.SubscriptionService`
-
-### Background Services
-`SubscriptionBackgroundService` runs scheduled tasks for subscription expiry checks and notifications.
-
-## Authentication & Security
-
-- **Identity Framework**: Custom `User` entity extending `IdentityUser` 
-- **JWT + Refresh Tokens**: Dual-token authentication system
-- **OAuth**: Google authentication integration via `GoogleAuthExtensions`
-- **Rate Limiting**: AspNetCoreRateLimit with IP-based throttling
-- **Data Protection**: Personal data encryption using ASP.NET Core Data Protection
-- **Audit Logging**: All requests logged via `AuditMiddleware`
-
-## Configuration Management
-
-Critical settings in `appsettings.json`:
-- **ConnectionStrings**: PostgreSQL database (port 5435)
-- **SendGrid**: Email service configuration
-- **Paystack/Monnify**: Payment provider settings
-- **JWT**: Token signing and validation
-- **Security**: Encryption keys and audit retention
-
-User secrets for sensitive data (use `dotnet user-secrets` commands).
-
-## Development Workflows
-
-### Build & Run
-```bash
-dotnet build                    # Build entire solution
-dotnet run --project Educate.API   # Start API server
-```
-
-### Database Operations
-```bash
-dotnet ef migrations add <name> --project Educate.Infrastructure --startup-project Educate.API
-dotnet ef database update --project Educate.Infrastructure --startup-project Educate.API
-```
-
-### Testing API Endpoints
-Use `Educate.API.http` file with REST Client extension, or Swagger UI at `/swagger`.
-
-## Integration Points
-
-- **Email**: SendGrid via `IEmailService` (registration, password reset, notifications)
-- **Payments**: Dual provider support (Paystack + Monnify) via `IPaymentService`
-- **Logging**: Serilog with file and console sinks to `logs/` directory
-- **Background Processing**: Subscription expiry notifications and status updates
-
-## Key Conventions
-
-- **GUID Primary Keys**: All entities use `Guid` IDs (e.g., `CourseId`, `UserId`)
-- **UTC Timestamps**: All DateTime fields stored/calculated in UTC
-- **Async/Await**: All database operations are asynchronous
-- **Include Navigation Properties**: EF queries explicitly include related data via `.Include()`
-- **Structured Logging**: Use template parameters: `_logger.LogInformation("User {UserId} subscribed to {CourseId}", userId, courseId)`
-
-## Common Anti-Patterns to Avoid
-
-- Don't inject `AppDbContext` directly in controllers - use application services
-- Don't hardcode email templates - use the template system in `EmailService`
-- Don't bypass the middleware pipeline order
-- Don't forget to configure CORS for new endpoints requiring frontend access
-
-## Essential Class Reference
-
-### Core Entities (Educate.Domain.Entities)
-```csharp
-// User extends IdentityUser
-public class User : IdentityUser
-{
-    public string FirstName { get; set; }
-    public string LastName { get; set; }
-    public string? StudentId { get; set; }
-    public DateTime CreatedAt { get; set; }
-    public DateTime? LastLoginAt { get; set; }
-    public DateTime? EmailConfirmedAt { get; set; }
-    public string? OAuthProvider { get; set; }
-    // Navigation: Subscriptions, Payments, TestResults
-}
-
-// Course hierarchy: Course → Level → Subject
-public class Course
-{
-    public Guid CourseId { get; set; }  // Primary Key
-    public string Name { get; set; }
-    public string Description { get; set; }
-    public DateTime CreatedAt { get; set; }
-    public DateTime UpdatedAt { get; set; }
-    public virtual ICollection<Level> Levels { get; set; }
-}
-
-public class Level 
-{
-    public Guid LevelId { get; set; }   // Primary Key
-    public Guid CourseId { get; set; }  // Foreign Key
-    public string Name { get; set; }
-    public int Order { get; set; }      // Sequence within course
-    public virtual Course Course { get; set; }
-    public virtual ICollection<Subject> Subjects { get; set; }
-}
-
-public class Subject
-{
-    public Guid SubjectId { get; set; } // Primary Key
-    public Guid LevelId { get; set; }   // Foreign Key
-    public string Name { get; set; }
-    public virtual Level Level { get; set; }
-}
-```
-
-### Key DTOs (Educate.Application.Models.DTOs)
-```csharp
-// Authentication DTOs
-public class RegisterDto
-{
-    public string FirstName { get; set; }
-    public string LastName { get; set; }
-    public string Username { get; set; }
-    public string Email { get; set; }
-    public string Password { get; set; }
-    public string ConfirmPassword { get; set; }
-}
-
-public class LoginDto
-{
-    public string EmailOrUsername { get; set; }  // Accepts both
-    public string Password { get; set; }
-}
-
-public class LoginResponseDto 
-{
-    public bool Success { get; set; }
-    public string Message { get; set; }
-    public string? Token { get; set; }
-    public string? RefreshToken { get; set; }
-    public DateTime? ExpiresAt { get; set; }
-}
-
-// Course Management DTOs
-public class CreateCourseDto
-{
-    public string Name { get; set; }
-    public string Description { get; set; }
-}
-
-public class CreateLevelDto
-{
-    public Guid CourseId { get; set; }
-    public string Name { get; set; }
-    public int Order { get; set; }
-}
-
-public class CreateSubjectDto
-{
-    public Guid LevelId { get; set; }
-    public string Name { get; set; }
-}
-
-// Pagination
-public class PagedResult<T>
-{
-    public List<T> Items { get; set; }
-    public int TotalCount { get; set; }
-    public int PageNumber { get; set; }
-    public int PageSize { get; set; }
-    public int TotalPages { get; }
-    public bool HasNextPage { get; }
-    public bool HasPreviousPage { get; }
-}
-```
-
-### Core Interfaces (Educate.Application.Interfaces)
-```csharp
-public interface IJwtService
-{
-    Task<string> GenerateTokenAsync(User user);
-    Task<string> GenerateRefreshTokenAsync(User user);
-    Task<bool> ValidateRefreshTokenAsync(string userId, string refreshToken);
-    string GeneratePasswordResetToken(User user);
-    bool ValidatePasswordResetToken(string token, out string userId);
-}
-
-public interface IEmailService
-{
-    Task SendEmailAsync(string toEmail, string subject, string message);
-    Task SendWelcomeEmailAsync(string toEmail, string userName);
-    Task SendPasswordResetEmailAsync(string toEmail, string resetToken);
-    Task SendEmailConfirmationAsync(string toEmail, string userName, string confirmationToken);
-    Task SendLoginNotificationAsync(string toEmail, string userName, string ipAddress, string userAgent);
-}
-
-public interface IAuditService
-{
-    Task LogAsync(string userId, string action, string details, string ipAddress, string userAgent);
-}
-
-public interface IPaymentService
-{
-    Task<PaymentInitializationResponse> InitializePaymentAsync(string userId, PaymentInitializationRequest request);
-    Task<bool> ProcessPaystackWebhookAsync(string signature, string payload);
-    Task<bool> ProcessMonnifyWebhookAsync(string signature, string payload);
-}
-
-public interface ISubscriptionService
-{
-    Task CheckExpiredSubscriptionsAsync();
-    Task NotifyExpiringSubscriptionsAsync();
-}
-```
-
-### Controller Route Patterns
-```csharp
-// Authentication routes
-[HttpPost("register")]              // POST /api/auth/register
-[HttpPost("login")]                 // POST /api/auth/login
-[HttpGet("confirm-email")]          // GET /api/auth/confirm-email?token=
-[HttpPost("refresh-token")]         // POST /api/auth/refresh-token
-[HttpPost("forgot-password")]       // POST /api/auth/forgot-password
-[HttpPost("reset-password")]        // POST /api/auth/reset-password
-
-// Admin routes (require AdminOnly policy)
-[HttpPost("courses")]               // POST /api/admin/courses
-[HttpGet("courses/{id}")]           // GET /api/admin/courses/{guid}
-[HttpPut("courses/{id}")]           // PUT /api/admin/courses/{guid}
-[HttpDelete("courses/{id}")]        // DELETE /api/admin/courses/{guid}
-
-// Nested resource routes
-[HttpPost("courses/{courseId}/levels")]     // POST /api/admin/courses/{guid}/levels
-[HttpPost("levels/{levelId}/subjects")]     // POST /api/admin/levels/{guid}/subjects
-
-// Analytics routes
-[HttpGet("analytics/subscriptions")]        // GET /api/admin/analytics/subscriptions
-[HttpGet("analytics/engagement")]           // GET /api/admin/analytics/engagement
-```
-
-### Database Context Usage
-```csharp
-// Always inject AppDbContext in services, not controllers
-private readonly AppDbContext _context;
-
-// Standard query patterns with Include
-var course = await _context.Courses
-    .Include(c => c.Levels)
-    .ThenInclude(l => l.Subjects)
-    .FirstOrDefaultAsync(c => c.CourseId == id);
-
-// Case-insensitive uniqueness checks
-if (await _context.Courses.AnyAsync(c => c.Name.ToLower() == dto.Name.ToLower()))
-    return BadRequest("A course with this name already exists.");
-
-// Pagination with Skip/Take
-var courses = await _context.Courses
-    .Skip((page - 1) * pageSize)
-    .Take(pageSize)
-    .ToListAsync();
-```
+AI Coding Instructions for Educate Platform (Updated with Phases & Steps)
+Architecture Overview
+
+Clean Architecture .NET 9 educational platform.
+
+Layers:
+
+Educate.API: Web API controllers, middleware, extensions, configuration
+
+Educate.Application: Application services, DTOs, interfaces
+
+Educate.Domain: Entities, value objects, domain exceptions
+
+Educate.Infrastructure: Data access, external services, implementations
+
+Data Flow: Controller → Application Interface → Infrastructure Implementation → PostgreSQL Database
+
+Core Domain Model
+
+User: Extends IdentityUser
+Fields: FirstName, LastName, Username, Email, OAuthProvider, Subscriptions, Payments, TestResults, CreatedAt, LastLoginAt, EmailConfirmedAt
+
+Course → Level → Subject → Test
+
+Subscription: Tracks user access and expiry (6 months)
+
+Payment: Handles Paystack/Monnify payments
+
+Test/QuestionBank: Manages practice tests and mock exams
+
+Phases & Steps
+Phase 1 – Course & Level Management (Admin Panel First)
+
+Goal: Create course hierarchy so users can subscribe to levels.
+
+Admin can create Courses (ATS, ICAN)
+
+Admin can add Levels within courses:
+
+ATS1, ATS2, ATS3
+
+Foundation, Skills, Professional
+
+Admin can add Subjects under levels:
+
+Example: ATS1 → Communication Skills, Basic Accounting, Economics, Business Law
+
+Example: ICAN Foundation → Corporate Law, Management Accounting
+
+Admin can update, delete, or disable courses, levels, or subjects
+
+Database Tables:
+
+Courses → Levels → Subjects (one-to-many relationships)
+
+Pros: Organized content, ready for subscription flow
+
+Cons: Requires admin discipline for correct order
+
+Phase 2 – User Enrollment & Subscription Flow
+
+Goal: Allow users to register, enroll in courses, and manage subscriptions.
+
+Registration Flow
+
+Standard signup:
+
+Fields: First Name, Last Name, Username, Email, Password, Confirm Password
+
+Password hashed via ASP.NET Identity
+
+Google OAuth signup
+
+After OAuth signup, prompt to set password later
+
+Email Verification
+
+Send 6-digit confirmation code via SendGrid
+
+Store token hashed in DB
+
+Notify users if unverified on login (can verify later)
+
+Subscriptions
+
+User selects course and level
+
+Subscription duration: 6 months
+
+User can subscribe to multiple levels and courses
+
+Notifications for expiry via email and dashboard
+
+Database Tables:
+
+Users
+
+Subscriptions (UserId, CourseId, LevelId, StartDate, ExpiryDate, Status)
+
+Pros: Flexible subscriptions, multi-course support
+
+Cons: Requires proper notification handling for expiry
+
+Phase 3 – Payments Integration (Monnify + Paystack)
+
+Goal: Collect payments for subscriptions securely.
+
+User selects a course level → chooses payment provider
+
+Monnify: One-time payments
+
+Paystack: Full transaction handling
+
+Server-side Verification
+
+Never trust frontend confirmation
+
+Verify payment signature via webhook
+
+Receipts
+
+Generate PDF/email receipt after payment
+
+Store in Payments table
+
+Database Tables
+
+Payments (UserId, SubscriptionId, Amount, Provider, Status, ReceiptUrl, CreatedAt)
+
+Security Best Practices
+
+Store API keys in dotnet user-secrets
+
+HTTPS everywhere
+
+Validate webhook signatures
+
+Pros: Dual payment providers increase reliability
+
+Cons: Webhook handling complexity
+
+Phase 4 – Renewal & Expiry Handling
+
+Goal: Manage subscription expiry and renewal reminders.
+
+Background Service
+
+SubscriptionBackgroundService runs periodic checks
+
+Notifications
+
+7 days before expiry: send email and dashboard notification
+
+After expiry: block new tests but allow dashboard review
+
+Renewal
+
+User can renew subscription via payment
+
+Extend expiry date by 6 months
+
+Pros: Automatic reminders improve retention
+
+Cons: Requires reliable background processing
+
+Phase 5 – User Dashboard & Progress Tracking
+
+Goal: Show subscribed courses, progress, and test scores.
+
+Dashboard Elements
+
+Active subscriptions
+
+Expiry dates
+
+Test history and scores
+
+Weak subjects (performance analytics)
+
+Progress Tracking
+
+Track practice test completion per subject
+
+Track mock exam scores
+
+Pros: Users see performance trends
+
+Cons: Requires relational queries across multiple tables
+
+Phase 6 – Practice Tests & Mock Exams System
+
+Goal: Provide learning and exam simulation.
+
+Practice Mode
+
+Self-paced, one question at a time
+
+Instant feedback
+
+Mock Exam Mode
+
+Timed full exam, random question selection
+
+Scorecard after submission
+
+Question Bank Structure
+
+Fields: QuestionText, Options, CorrectAnswer, Explanation, Difficulty
+
+Admin can upload in bulk
+
+Test Attempt Flow
+
+Start test → save answers → calculate score → store in UserTestAttempts
+
+Analytics
+
+User progress over time
+
+Weak subjects highlighted
+
+Pros: Simulates real exam conditions
+
+Cons: Complexity in randomization and scoring
+
+Phase 7 – Admin Panel Advanced Features
+
+Goal: Manage users, courses, payments, and analytics.
+
+Bulk upload of courses, levels, subjects, and questions
+
+View all users and subscriptions
+
+View payments and generate receipts
+
+Analytics dashboards:
+
+Engagement
+
+Subscription renewals
+
+Test performance across subjects
+
+Audit logging for all actions
+
+Pros: Efficient platform management
+
+Cons: Requires role-based security enforcement
+
+Authentication & Security
+
+JWT + Refresh Tokens
+
+Login returns access and refresh tokens
+
+Google OAuth
+
+Optional signup, then prompt for password
+
+Forgot Password
+
+Send reset link via email (SendGrid)
+
+Token stored hashed in DB
+
+Password Hashing
+
+ASP.NET Core Identity default hashing
+
+Rate Limiting
+
+IP-based throttling
+
+Audit Logging
+
+All critical actions logged
+
+Pros: Secure, standard best practices
+
+Cons: Complexity in token refresh handling
+
+Database Overview
+
+Tables:
+
+Users (IdentityUser extended)
+
+Courses → Levels → Subjects
+
+Subscriptions (User, Course, Level, Start/Expiry)
+
+Payments (User, Subscription, Amount, Provider)
+
+UserTestAttempts (TestType, Score, TimeTaken)
+
+QuestionBank (Questions, Options, CorrectAnswer, Difficulty)
+
+AuditLogs (User, Action, Timestamp, IP, UserAgent)
+
+Integration Points
+
+SendGrid
+
+Registration emails, password reset, notifications
+
+Monnify & Paystack
+
+Payment processing, webhook verification
+
+JWT Tokens
+
+Authentication & authorization
+
+Background Services
+
+Expiry & renewal notifications
+
+Development Guidelines
+
+Controllers: Use DTOs, async methods, include navigation properties
+
+Services: Use dependency injection; implement interfaces in Infrastructure
+
+Middleware: Security headers, request validation, audit logging, rate limiting
+
+Database: PostgreSQL, migrations via EF Core
+
+Secrets: Store SendGrid, Monnify, Paystack keys using dotnet user-secrets

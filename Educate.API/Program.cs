@@ -22,7 +22,7 @@ builder.Services.AddRateLimiting(builder.Configuration);
 builder.Services.AddSecurityServices();
 builder.Services.AddEmailServices(builder.Configuration);
 builder.Services.AddPaymentServices(builder.Configuration);
-builder.Services.AddHostedService<Educate.Infrastructure.Services.SubscriptionBackgroundService>();
+builder.Services.AddApplicationServices();
 
 var app = builder.Build();
 
@@ -52,3 +52,5 @@ app.UseAuthorization();
 app.MapControllers();
 
 app.Run();
+
+public partial class Program { }

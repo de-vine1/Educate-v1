@@ -13,6 +13,8 @@ public class Payment
 
     public Guid? CourseId { get; set; }
     public Guid? LevelId { get; set; }
+
+    [Column(TypeName = "decimal(18,2)")]
     public decimal Amount { get; set; }
 
     [Required]

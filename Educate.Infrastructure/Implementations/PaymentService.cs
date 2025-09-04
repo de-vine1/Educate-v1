@@ -8,6 +8,7 @@ using Educate.Infrastructure.Configurations;
 using Educate.Infrastructure.Database;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
 namespace Educate.Infrastructure.Implementations;
@@ -21,6 +22,8 @@ public class PaymentService : IPaymentService
     private readonly HttpClient _httpClient;
     private readonly IConfiguration _configuration;
     private readonly IReceiptService _receiptService;
+    private readonly IEmailService _emailService;
+    private readonly ILogger<PaymentService> _logger;
 
     public PaymentService(
         AppDbContext context,
@@ -29,7 +32,9 @@ public class PaymentService : IPaymentService
         IOptions<MonnifyConfig> monnifyConfig,
         HttpClient httpClient,
         IConfiguration configuration,
-        IReceiptService receiptService
+        IReceiptService receiptService,
+        IEmailService emailService,
+        ILogger<PaymentService> logger
     )
     {
         _context = context;
@@ -39,6 +44,8 @@ public class PaymentService : IPaymentService
         _httpClient = httpClient;
         _configuration = configuration;
         _receiptService = receiptService;
+        _emailService = emailService;
+        _logger = logger;
     }
 
     public async Task<string> ProcessPaymentAsync(string userId, Guid courseId, string cardToken)
@@ -48,7 +55,7 @@ public class PaymentService : IPaymentService
         var payment = new Payment
         {
             UserId = userId,
-            Amount = 50000,
+            Amount = 5000,
             Provider = "Paystack",
             Reference = reference,
             Status = "Pending",
@@ -88,7 +95,7 @@ public class PaymentService : IPaymentService
             };
 
         var reference = $"EDU_{DateTime.UtcNow:yyyyMMddHHmmss}_{Guid.NewGuid().ToString()[..8]}";
-        var amount = 50000;
+        var amount = 5000;
 
         var payment = new Payment
         {
@@ -110,14 +117,14 @@ public class PaymentService : IPaymentService
                 user.Email!,
                 amount,
                 reference,
-                request.CallbackUrl
+                "https://educate.com/payment/callback"
             ),
             "monnify" => await InitializeMonnifyPayment(
                 user.FirstName + " " + user.LastName,
                 user.Email!,
                 amount,
                 reference,
-                request.CallbackUrl
+                "https://educate.com/payment/callback"
             ),
             _ => new PaymentInitializationResponse
             {
@@ -134,50 +141,85 @@ public class PaymentService : IPaymentService
         string callbackUrl
     )
     {
-        var requestData = new PaystackInitializeRequest
+        try
         {
-            Amount = (int)(amount * 100),
-            Email = email,
-            Reference = reference,
-            Callback_url = callbackUrl,
-        };
+            var requestData = new PaystackInitializeRequest
+            {
+                Amount = amount.ToString("F0"), // Convert to string as per Paystack docs
+                Email = email,
+                Reference = reference,
+                Callback_url = callbackUrl,
+                Currency = "NGN",
+                Channels = new[] { "card", "bank", "ussd", "qr", "mobile_money", "bank_transfer" },
+            };
 
-        var json = JsonSerializer.Serialize(requestData);
-        var content = new StringContent(json, Encoding.UTF8, "application/json");
-
-        _httpClient.DefaultRequestHeaders.Clear();
-        _httpClient.DefaultRequestHeaders.Add(
-            "Authorization",
-            $"Bearer {_paystackConfig.SecretKey}"
-        );
-
-        var response = await _httpClient.PostAsync(
-            $"{_paystackConfig.BaseUrl}/transaction/initialize",
-            content
-        );
-        var responseContent = await response.Content.ReadAsStringAsync();
-
-        if (response.IsSuccessStatusCode)
-        {
-            var paystackResponse = JsonSerializer.Deserialize<PaystackInitializeResponse>(
-                responseContent,
-                new JsonSerializerOptions { PropertyNameCaseInsensitive = true }
+            var json = JsonSerializer.Serialize(
+                requestData,
+                new JsonSerializerOptions { PropertyNamingPolicy = new SnakeCaseNamingPolicy() }
             );
 
+            _logger.LogInformation(
+                "Paystack request: {Json}, SecretKey: {SecretKey}",
+                json,
+                _paystackConfig.SecretKey?.Substring(0, 10) + "..."
+            );
+
+            var content = new StringContent(json, Encoding.UTF8, "application/json");
+
+            _httpClient.DefaultRequestHeaders.Clear();
+            _httpClient.DefaultRequestHeaders.Add(
+                "Authorization",
+                $"Bearer {_paystackConfig.SecretKey}"
+            );
+
+            var response = await _httpClient.PostAsync(
+                $"{_paystackConfig.BaseUrl}/transaction/initialize",
+                content
+            );
+            var responseContent = await response.Content.ReadAsStringAsync();
+
+            _logger.LogInformation(
+                "Paystack response: {StatusCode} - {Response}",
+                response.StatusCode,
+                responseContent
+            );
+
+            if (response.IsSuccessStatusCode)
+            {
+                var paystackResponse = JsonSerializer.Deserialize<PaystackInitializeResponse>(
+                    responseContent,
+                    new JsonSerializerOptions { PropertyNameCaseInsensitive = true }
+                );
+
+                return new PaymentInitializationResponse
+                {
+                    Success = paystackResponse?.Status == true,
+                    PaymentUrl = paystackResponse?.Data?.Authorization_url ?? string.Empty,
+                    Reference = paystackResponse?.Data?.Reference ?? reference,
+                    Message = paystackResponse?.Message ?? "Payment initialized successfully",
+                };
+            }
+
+            _logger.LogError(
+                "Paystack API error: {StatusCode} - {Response}",
+                response.StatusCode,
+                responseContent
+            );
             return new PaymentInitializationResponse
             {
-                Success = paystackResponse?.Status == true,
-                PaymentUrl = paystackResponse?.Data?.Authorization_url ?? string.Empty,
-                Reference = reference,
-                Message = paystackResponse?.Message ?? "Payment initialized successfully",
+                Success = false,
+                Message = $"Failed to initialize Paystack payment: {response.StatusCode}",
             };
         }
-
-        return new PaymentInitializationResponse
+        catch (Exception ex)
         {
-            Success = false,
-            Message = "Failed to initialize Paystack payment",
-        };
+            _logger.LogError(ex, "Exception in InitializePaystackPayment");
+            return new PaymentInitializationResponse
+            {
+                Success = false,
+                Message = "Failed to initialize Paystack payment",
+            };
+        }
     }
 
     private async Task<PaymentInitializationResponse> InitializeMonnifyPayment(
@@ -188,60 +230,104 @@ public class PaymentService : IPaymentService
         string callbackUrl
     )
     {
-        var requestData = new MonnifyInitializeRequest
+        try
         {
-            Amount = amount,
-            CustomerName = customerName,
-            CustomerEmail = email,
-            PaymentReference = reference,
-            PaymentDescription = "Educate Platform Subscription",
-            CurrencyCode = "NGN",
-            ContractCode = _monnifyConfig.ContractCode,
-            RedirectUrl = callbackUrl,
-        };
+            // First get access token
+            var accessToken = await GetMonnifyAccessTokenAsync();
+            if (string.IsNullOrEmpty(accessToken))
+            {
+                return new PaymentInitializationResponse
+                {
+                    Success = false,
+                    Message = "Failed to get Monnify access token",
+                };
+            }
 
-        var json = JsonSerializer.Serialize(requestData);
-        var content = new StringContent(json, Encoding.UTF8, "application/json");
+            var requestData = new MonnifyInitializeRequest
+            {
+                Amount = amount,
+                CustomerName = customerName,
+                CustomerEmail = email,
+                PaymentReference = reference,
+                PaymentDescription = "Educate Platform Subscription",
+                CurrencyCode = "NGN",
+                ContractCode = _monnifyConfig.ContractCode,
+                RedirectUrl = callbackUrl,
+                PaymentMethods = new[] { "CARD", "ACCOUNT_TRANSFER", "USSD", "PHONE_NUMBER" },
+            };
 
-        var authString = Convert.ToBase64String(
-            Encoding.UTF8.GetBytes($"{_monnifyConfig.ApiKey}:{_monnifyConfig.SecretKey}")
-        );
-        _httpClient.DefaultRequestHeaders.Clear();
-        _httpClient.DefaultRequestHeaders.Add("Authorization", $"Basic {authString}");
-
-        var response = await _httpClient.PostAsync(
-            $"{_monnifyConfig.BaseUrl}/api/v1/merchant/transactions/init-transaction",
-            content
-        );
-        var responseContent = await response.Content.ReadAsStringAsync();
-
-        if (response.IsSuccessStatusCode)
-        {
-            var monnifyResponse = JsonSerializer.Deserialize<MonnifyInitializeResponse>(
-                responseContent,
-                new JsonSerializerOptions { PropertyNameCaseInsensitive = true }
+            var json = JsonSerializer.Serialize(
+                requestData,
+                new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase }
             );
 
+            _logger.LogInformation("Monnify request: {Json}", json);
+            var content = new StringContent(json, Encoding.UTF8, "application/json");
+
+            _httpClient.DefaultRequestHeaders.Clear();
+            _httpClient.DefaultRequestHeaders.Add("Authorization", $"Bearer {accessToken}");
+
+            var response = await _httpClient.PostAsync(
+                $"{_monnifyConfig.BaseUrl}/api/v1/merchant/transactions/init-transaction",
+                content
+            );
+            var responseContent = await response.Content.ReadAsStringAsync();
+
+            _logger.LogInformation(
+                "Monnify response: {StatusCode} - {Response}",
+                response.StatusCode,
+                responseContent
+            );
+
+            if (response.IsSuccessStatusCode)
+            {
+                var monnifyResponse = JsonSerializer.Deserialize<MonnifyInitializeResponse>(
+                    responseContent,
+                    new JsonSerializerOptions { PropertyNameCaseInsensitive = true }
+                );
+
+                return new PaymentInitializationResponse
+                {
+                    Success = monnifyResponse?.RequestSuccessful == true,
+                    PaymentUrl = monnifyResponse?.ResponseBody?.CheckoutUrl ?? string.Empty,
+                    Reference = reference,
+                    Message =
+                        monnifyResponse?.ResponseMessage ?? "Payment initialized successfully",
+                };
+            }
+
+            _logger.LogError(
+                "Monnify API error: {StatusCode} - {Response}",
+                response.StatusCode,
+                responseContent
+            );
             return new PaymentInitializationResponse
             {
-                Success = monnifyResponse?.RequestSuccessful == true,
-                PaymentUrl = monnifyResponse?.ResponseBody?.CheckoutUrl ?? string.Empty,
-                Reference = reference,
-                Message = monnifyResponse?.ResponseMessage ?? "Payment initialized successfully",
+                Success = false,
+                Message = $"Failed to initialize Monnify payment: {response.StatusCode}",
             };
         }
-
-        return new PaymentInitializationResponse
+        catch (Exception ex)
         {
-            Success = false,
-            Message = "Failed to initialize Monnify payment",
-        };
+            _logger.LogError(ex, "Exception in InitializeMonnifyPayment");
+            return new PaymentInitializationResponse
+            {
+                Success = false,
+                Message = "Failed to initialize Monnify payment",
+            };
+        }
     }
 
     public async Task<bool> ProcessPaystackWebhookAsync(string signature, string payload)
     {
         if (!VerifyPaystackSignature(payload, signature))
+        {
+            _logger.LogWarning(
+                "Invalid Paystack webhook signature received. Payload: {Payload}",
+                payload
+            );
             return false;
+        }
 
         var webhook = JsonSerializer.Deserialize<PaystackWebhookDto>(
             payload,
@@ -260,7 +346,13 @@ public class PaymentService : IPaymentService
     public async Task<bool> ProcessMonnifyWebhookAsync(string signature, string payload)
     {
         if (!VerifyMonnifySignature(payload, signature))
+        {
+            _logger.LogWarning(
+                "Invalid Monnify webhook signature received. Payload: {Payload}",
+                payload
+            );
             return false;
+        }
 
         var webhook = JsonSerializer.Deserialize<MonnifyWebhookDto>(
             payload,
@@ -309,11 +401,70 @@ public class PaymentService : IPaymentService
         return Convert.ToHexString(hash).ToLower();
     }
 
+    private async Task<string> GetMonnifyAccessTokenAsync()
+    {
+        try
+        {
+            var authString = Convert.ToBase64String(
+                Encoding.UTF8.GetBytes($"{_monnifyConfig.ApiKey}:{_monnifyConfig.SecretKey}")
+            );
+            
+            _logger.LogInformation("Monnify auth - ApiKey: {ApiKey}, BaseUrl: {BaseUrl}", 
+                _monnifyConfig.ApiKey?.Substring(0, 10) + "...", _monnifyConfig.BaseUrl);
+
+            _httpClient.DefaultRequestHeaders.Clear();
+            _httpClient.DefaultRequestHeaders.Add("Authorization", $"Basic {authString}");
+
+            var response = await _httpClient.PostAsync(
+                $"{_monnifyConfig.BaseUrl}/api/v1/auth/login",
+                new StringContent("{}", Encoding.UTF8, "application/json")
+            );
+            
+            var content = await response.Content.ReadAsStringAsync();
+            _logger.LogInformation("Monnify auth response: {StatusCode} - {Response}", 
+                response.StatusCode, content);
+
+            if (!response.IsSuccessStatusCode)
+            {
+                _logger.LogError(
+                    "Failed to get Monnify access token: {StatusCode} - {Response}",
+                    response.StatusCode, content
+                );
+                return string.Empty;
+            }
+
+            var tokenResponse = JsonSerializer.Deserialize<MonnifyTokenResponse>(
+                content,
+                new JsonSerializerOptions { PropertyNameCaseInsensitive = true }
+            );
+
+            return tokenResponse?.ResponseBody?.AccessToken ?? string.Empty;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Exception getting Monnify access token");
+            return string.Empty;
+        }
+    }
+
     private async Task<bool> VerifyAndUpdatePaymentAsync(string reference, string provider)
     {
         var payment = await _context.Payments.FirstOrDefaultAsync(p => p.Reference == reference);
-        if (payment == null || payment.Status != "Pending")
+        if (payment == null)
+        {
+            _logger.LogWarning("Payment not found for reference: {Reference}", reference);
             return true;
+        }
+
+        if (payment.Status != "Pending")
+        {
+            _logger.LogInformation(
+                "Duplicate webhook received for payment {Reference} with status {Status}",
+                reference,
+                payment.Status
+            );
+            return true; // Idempotency - already processed
+        }
 
         var isVerified =
             provider == "Paystack"
@@ -323,6 +474,11 @@ public class PaymentService : IPaymentService
         if (isVerified)
         {
             payment.Status = "Success";
+            _logger.LogInformation(
+                "Payment {Reference} verified successfully for user {UserId}",
+                reference,
+                payment.UserId
+            );
             await CreateUserSubscriptionAsync(payment.UserId, payment.PaymentId);
 
             // Generate and send receipt
@@ -333,15 +489,45 @@ public class PaymentService : IPaymentService
                     await _receiptService.GenerateReceiptAsync(payment.PaymentId);
                     await _receiptService.SendReceiptEmailAsync(payment.PaymentId);
                 }
-                catch (Exception)
+                catch (Exception ex)
                 {
-                    // Log error but don't fail the payment process
+                    _logger.LogError(
+                        ex,
+                        "Failed to generate/send receipt for payment {PaymentId}",
+                        payment.PaymentId
+                    );
                 }
             });
         }
         else
         {
             payment.Status = "Failed";
+            _logger.LogWarning("Payment verification failed for reference: {Reference}", reference);
+
+            // Send payment failed email
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    var user = await _context.Users.FindAsync(payment.UserId);
+                    if (user != null)
+                    {
+                        await SendPaymentFailedEmailAsync(
+                            user.Email!,
+                            user.FirstName,
+                            payment.Reference
+                        );
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(
+                        ex,
+                        "Failed to send payment failed email for reference {Reference}",
+                        reference
+                    );
+                }
+            });
         }
 
         await _context.SaveChangesAsync();
@@ -373,26 +559,46 @@ public class PaymentService : IPaymentService
 
     private async Task<bool> VerifyMonnifyTransactionAsync(string reference)
     {
-        var authString = Convert.ToBase64String(
-            Encoding.UTF8.GetBytes($"{_monnifyConfig.ApiKey}:{_monnifyConfig.SecretKey}")
-        );
-        _httpClient.DefaultRequestHeaders.Clear();
-        _httpClient.DefaultRequestHeaders.Add("Authorization", $"Basic {authString}");
+        try
+        {
+            var accessToken = await GetMonnifyAccessTokenAsync();
+            if (string.IsNullOrEmpty(accessToken))
+                return false;
 
-        var response = await _httpClient.GetAsync(
-            $"{_monnifyConfig.BaseUrl}/api/v2/transactions/{reference}"
-        );
-        if (!response.IsSuccessStatusCode)
+            _httpClient.DefaultRequestHeaders.Clear();
+            _httpClient.DefaultRequestHeaders.Add("Authorization", $"Bearer {accessToken}");
+
+            var response = await _httpClient.GetAsync(
+                $"{_monnifyConfig.BaseUrl}/api/v2/merchant/transactions/query?paymentReference={reference}"
+            );
+
+            if (!response.IsSuccessStatusCode)
+            {
+                _logger.LogWarning(
+                    "Monnify verification failed: {StatusCode}",
+                    response.StatusCode
+                );
+                return false;
+            }
+
+            var content = await response.Content.ReadAsStringAsync();
+            var verification = JsonSerializer.Deserialize<MonnifyVerificationResponse>(
+                content,
+                new JsonSerializerOptions { PropertyNameCaseInsensitive = true }
+            );
+
+            return verification?.RequestSuccessful == true
+                && verification.ResponseBody?.PaymentStatus == "PAID";
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(
+                ex,
+                "Exception in VerifyMonnifyTransactionAsync for reference {Reference}",
+                reference
+            );
             return false;
-
-        var content = await response.Content.ReadAsStringAsync();
-        var verification = JsonSerializer.Deserialize<MonnifyVerificationResponse>(
-            content,
-            new JsonSerializerOptions { PropertyNameCaseInsensitive = true }
-        );
-
-        return verification?.RequestSuccessful == true
-            && verification.ResponseBody?.PaymentStatus == "PAID";
+        }
     }
 
     private async Task CreateUserSubscriptionAsync(string userId, Guid paymentId)
@@ -411,21 +617,21 @@ public class PaymentService : IPaymentService
 
         if (existingSubscription != null)
         {
-            // Extend existing subscription by 6 months
+            // Extend existing subscription by 6 months from current end date
             existingSubscription.SubscriptionEndDate =
                 existingSubscription.SubscriptionEndDate.AddMonths(6);
             existingSubscription.UpdatedAt = DateTime.UtcNow;
         }
         else
         {
-            // Create new subscription
+            // Create new subscription with 6-month validity
             var userCourse = new UserCourse
             {
                 UserId = userId,
                 CourseId = payment.CourseId.Value,
                 LevelId = payment.LevelId.Value,
                 SubscriptionStartDate = DateTime.UtcNow,
-                SubscriptionEndDate = DateTime.UtcNow.AddMonths(6),
+                SubscriptionEndDate = DateTime.UtcNow.AddMonths(6), // 6 months as per Phase 3
                 Status = "Active",
                 PaymentId = paymentId,
             };
@@ -440,6 +646,11 @@ public class PaymentService : IPaymentService
     {
         try
         {
+            _logger.LogInformation(
+                "Processing Paystack event {EventType} for reference {Reference}",
+                eventType,
+                reference
+            );
             switch (eventType)
             {
                 case "charge.success":
@@ -448,11 +659,19 @@ public class PaymentService : IPaymentService
                 case "charge.failed":
                     await HandleFailedTransactionAsync(reference);
                     break;
+                default:
+                    _logger.LogInformation("Unhandled Paystack event type: {EventType}", eventType);
+                    break;
             }
         }
-        catch (Exception)
+        catch (Exception ex)
         {
-            // Log error but don't throw - webhook already acknowledged
+            _logger.LogError(
+                ex,
+                "Error processing Paystack event {EventType} for reference {Reference}",
+                eventType,
+                reference
+            );
         }
     }
 
@@ -460,19 +679,34 @@ public class PaymentService : IPaymentService
     {
         try
         {
+            _logger.LogInformation(
+                "Processing Monnify event {EventType} for reference {Reference}",
+                eventType,
+                reference
+            );
             switch (eventType)
             {
                 case "SUCCESSFUL_TRANSACTION":
+                case "OVERPAYMENT_TRANSACTION":
                     await VerifyAndUpdatePaymentAsync(reference, "Monnify");
                     break;
                 case "FAILED_TRANSACTION":
+                case "EXPIRED_TRANSACTION":
                     await HandleFailedTransactionAsync(reference);
+                    break;
+                default:
+                    _logger.LogInformation("Unhandled Monnify event type: {EventType}", eventType);
                     break;
             }
         }
-        catch (Exception)
+        catch (Exception ex)
         {
-            // Log error but don't throw - webhook already acknowledged
+            _logger.LogError(
+                ex,
+                "Error processing Monnify event {EventType} for reference {Reference}",
+                eventType,
+                reference
+            );
         }
     }
 
@@ -484,5 +718,14 @@ public class PaymentService : IPaymentService
             payment.Status = "Failed";
             await _context.SaveChangesAsync();
         }
+    }
+
+    private async Task SendPaymentFailedEmailAsync(string email, string firstName, string reference)
+    {
+        await _emailService.SendEmailAsync(
+            email,
+            "Payment Failed - Educate Platform",
+            $"Dear {firstName},\n\nYour payment with reference {reference} could not be processed.\n\nPlease try again or contact support if the issue persists.\n\nRetry Payment: https://educate.com/payment/retry\nSupport: support@educate.com\n\nBest regards,\nEducate Platform Team"
+        );
     }
 }

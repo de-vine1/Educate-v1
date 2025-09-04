@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Paystack Integration</title>
+    <script src="https://js.paystack.co/v1/inline.js"></script>
+</head>
+<body>
+    <h1>Test Paystack Payment</h1>
+    <button type="button" onclick="payWithPaystack()">Pay With Paystack (Test)</button>
+
+    <script>
+        function payWithPaystack() {
+            var handler = PaystackPop.setup({
+                key: 'pk_test_5bde0936cc5e6268d5b37f0fdf2bdac0213c40fe', // Your test public key
+                email: 'test@educate.com',
+                amount: 5000, // 50 Naira in kobo
+                currency: 'NGN',
+                ref: 'EDU_TEST_' + Math.floor((Math.random() * 1000000000) + 1),
+                metadata: {
+                   custom_fields: [
+                      {
+                        display_name: "Course",
+                        variable_name: "course",
+                        value: "Test Course"
+                      }
+                   ]
+                },
+                callback: function(response) {
+                    console.log('Payment completed:', response);
+                    alert('Payment successful! Reference: ' + response.reference);
+                    // Here you would verify the transaction on your backend
+                },
+                onClose: function() {
+                    console.log('Payment modal closed');
+                    alert('Payment was not completed');
+                }
+            });
+            handler.openIframe();
+        }
+    </script>
+</body>
+</html>

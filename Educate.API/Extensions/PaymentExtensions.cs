@@ -17,6 +17,7 @@ public static class PaymentExtensions
             options.SecretKey = configuration["Paystack:SecretKey"] ?? string.Empty;
             options.PublicKey = configuration["Paystack:PublicKey"] ?? string.Empty;
             options.BaseUrl = configuration["Paystack:BaseUrl"] ?? "https://api.paystack.co";
+            options.CallbackUrl = configuration["Paystack:CallbackUrl"] ?? string.Empty;
         });
 
         // Configure Monnify
@@ -26,6 +27,7 @@ public static class PaymentExtensions
             options.SecretKey = configuration["Monnify:SecretKey"] ?? string.Empty;
             options.BaseUrl = configuration["Monnify:BaseUrl"] ?? "https://sandbox.monnify.com";
             options.ContractCode = configuration["Monnify:ContractCode"] ?? string.Empty;
+            options.CallbackUrl = configuration["Monnify:CallbackUrl"] ?? string.Empty;
         });
 
         // Register HttpClient and PaymentService

@@ -13,7 +13,7 @@ public class Notification
 
     [Required]
     [MaxLength(50)]
-    public string Type { get; set; } = string.Empty; // SUBSCRIPTION_EXPIRY, RENEWAL_REMINDER
+    public string Type { get; set; } = string.Empty; // PAYMENT_SUCCESS, PAYMENT_FAILED, SUBSCRIPTION_EXPIRY, etc.
 
     [Required]
     [MaxLength(200)]
@@ -26,7 +26,7 @@ public class Notification
     public bool EmailSent { get; set; } = false;
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
-    // Navigation property
+    // Navigation properties
     [ForeignKey("UserId")]
     public virtual User User { get; set; } = null!;
 }

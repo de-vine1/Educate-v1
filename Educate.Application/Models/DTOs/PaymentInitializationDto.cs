@@ -5,7 +5,6 @@ public class PaymentInitializationRequest
     public Guid CourseId { get; set; }
     public Guid LevelId { get; set; }
     public string PaymentProvider { get; set; } = string.Empty; // "Paystack" or "Monnify"
-    public string CallbackUrl { get; set; } = string.Empty;
 }
 
 public class PaymentInitializationResponse
@@ -18,10 +17,13 @@ public class PaymentInitializationResponse
 
 public class PaystackInitializeRequest
 {
-    public int Amount { get; set; }
+    public string Amount { get; set; } = string.Empty;
     public string Email { get; set; } = string.Empty;
     public string Reference { get; set; } = string.Empty;
     public string Callback_url { get; set; } = string.Empty;
+    public string Currency { get; set; } = "NGN";
+    public string[] Channels { get; set; } = Array.Empty<string>();
+    public object? Metadata { get; set; }
 }
 
 public class PaystackInitializeResponse
@@ -48,6 +50,7 @@ public class MonnifyInitializeRequest
     public string CurrencyCode { get; set; } = "NGN";
     public string ContractCode { get; set; } = string.Empty;
     public string RedirectUrl { get; set; } = string.Empty;
+    public string[] PaymentMethods { get; set; } = Array.Empty<string>();
 }
 
 public class MonnifyInitializeResponse
@@ -62,4 +65,17 @@ public class MonnifyResponseBody
     public string TransactionReference { get; set; } = string.Empty;
     public string PaymentReference { get; set; } = string.Empty;
     public string CheckoutUrl { get; set; } = string.Empty;
+}
+
+public class MonnifyTokenResponse
+{
+    public bool RequestSuccessful { get; set; }
+    public string ResponseMessage { get; set; } = string.Empty;
+    public MonnifyTokenData ResponseBody { get; set; } = new();
+}
+
+public class MonnifyTokenData
+{
+    public string AccessToken { get; set; } = string.Empty;
+    public int ExpiresIn { get; set; }
 }
