@@ -25,6 +25,16 @@ public class PaymentService : IPaymentService
     private readonly IEmailService _emailService;
     private readonly ILogger<PaymentService> _logger;
 
+    private static readonly JsonSerializerOptions MonnifyJsonOptions = new()
+    {
+        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+    };
+
+    private static readonly JsonSerializerOptions DeserializeOptions = new()
+    {
+        PropertyNameCaseInsensitive = true,
+    };
+
     public PaymentService(
         AppDbContext context,
         IEncryptionService encryptionService,
@@ -153,10 +163,7 @@ public class PaymentService : IPaymentService
                 Channels = new[] { "card", "bank", "ussd", "qr", "mobile_money", "bank_transfer" },
             };
 
-            var json = JsonSerializer.Serialize(
-                requestData,
-                new JsonSerializerOptions { PropertyNamingPolicy = new SnakeCaseNamingPolicy() }
-            );
+            var json = JsonSerializer.Serialize(requestData);
 
             _logger.LogInformation(
                 "Paystack request: {Json}, SecretKey: {SecretKey}",
@@ -188,7 +195,7 @@ public class PaymentService : IPaymentService
             {
                 var paystackResponse = JsonSerializer.Deserialize<PaystackInitializeResponse>(
                     responseContent,
-                    new JsonSerializerOptions { PropertyNameCaseInsensitive = true }
+                    DeserializeOptions
                 );
 
                 return new PaymentInitializationResponse
@@ -256,10 +263,7 @@ public class PaymentService : IPaymentService
                 PaymentMethods = new[] { "CARD", "ACCOUNT_TRANSFER", "USSD", "PHONE_NUMBER" },
             };
 
-            var json = JsonSerializer.Serialize(
-                requestData,
-                new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase }
-            );
+            var json = JsonSerializer.Serialize(requestData, MonnifyJsonOptions);
 
             _logger.LogInformation("Monnify request: {Json}", json);
             var content = new StringContent(json, Encoding.UTF8, "application/json");
@@ -408,9 +412,12 @@ public class PaymentService : IPaymentService
             var authString = Convert.ToBase64String(
                 Encoding.UTF8.GetBytes($"{_monnifyConfig.ApiKey}:{_monnifyConfig.SecretKey}")
             );
-            
-            _logger.LogInformation("Monnify auth - ApiKey: {ApiKey}, BaseUrl: {BaseUrl}", 
-                _monnifyConfig.ApiKey?.Substring(0, 10) + "...", _monnifyConfig.BaseUrl);
+
+            _logger.LogInformation(
+                "Monnify auth - ApiKey: {ApiKey}, BaseUrl: {BaseUrl}",
+                _monnifyConfig.ApiKey?.Substring(0, 10) + "...",
+                _monnifyConfig.BaseUrl
+            );
 
             _httpClient.DefaultRequestHeaders.Clear();
             _httpClient.DefaultRequestHeaders.Add("Authorization", $"Basic {authString}");
@@ -419,16 +426,20 @@ public class PaymentService : IPaymentService
                 $"{_monnifyConfig.BaseUrl}/api/v1/auth/login",
                 new StringContent("{}", Encoding.UTF8, "application/json")
             );
-            
+
             var content = await response.Content.ReadAsStringAsync();
-            _logger.LogInformation("Monnify auth response: {StatusCode} - {Response}", 
-                response.StatusCode, content);
+            _logger.LogInformation(
+                "Monnify auth response: {StatusCode} - {Response}",
+                response.StatusCode,
+                content
+            );
 
             if (!response.IsSuccessStatusCode)
             {
                 _logger.LogError(
                     "Failed to get Monnify access token: {StatusCode} - {Response}",
-                    response.StatusCode, content
+                    response.StatusCode,
+                    content
                 );
                 return string.Empty;
             }
