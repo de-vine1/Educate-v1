@@ -6,10 +6,10 @@ namespace Educate.Domain.Entities;
 public class Receipt
 {
     [Key]
-    public Guid ReceiptId { get; set; } = Guid.NewGuid();
+    public int ReceiptId { get; set; }
 
     [Required]
-    public Guid PaymentId { get; set; }
+    public int PaymentId { get; set; }
 
     [Required]
     public string ReceiptNumber { get; set; } = string.Empty;

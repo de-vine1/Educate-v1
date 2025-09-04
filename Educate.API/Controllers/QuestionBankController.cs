@@ -20,50 +20,64 @@ public class QuestionBankController : ControllerBase
     public async Task<IActionResult> AddQuestion([FromBody] AddQuestionRequest request)
     {
         var success = await _questionBankService.AddQuestionAsync(
-            request.CourseId, request.LevelId, request.SubjectId,
-            request.QuestionText, request.Options, request.CorrectAnswer,
-            request.Explanation, request.Difficulty, User.Identity?.Name ?? "Admin");
+            request.CourseId,
+            request.LevelId,
+            request.SubjectId,
+            request.QuestionText,
+            request.Options,
+            request.CorrectAnswer,
+            request.Explanation,
+            User.Identity?.Name ?? "Admin"
+        );
 
         return Ok(new { Success = success });
     }
 
     [HttpPut("{questionId}")]
-    public async Task<IActionResult> UpdateQuestion(Guid questionId, [FromBody] UpdateQuestionRequest request)
+    public async Task<IActionResult> UpdateQuestion(
+        int questionId,
+        [FromBody] UpdateQuestionRequest request
+    )
     {
         var success = await _questionBankService.UpdateQuestionAsync(
-            questionId, request.QuestionText, request.Options,
-            request.CorrectAnswer, request.Explanation, request.Difficulty);
+            questionId,
+            request.QuestionText,
+            request.Options,
+            request.CorrectAnswer,
+            request.Explanation
+        );
 
         return Ok(new { Success = success });
     }
 
     [HttpPatch("{questionId}/toggle")]
-    public async Task<IActionResult> ToggleQuestionStatus(Guid questionId)
+    public async Task<IActionResult> ToggleQuestionStatus(int questionId)
     {
         var success = await _questionBankService.ToggleQuestionStatusAsync(questionId);
         return Ok(new { Success = success });
     }
 
     [HttpGet]
-    public async Task<IActionResult> GetQuestions([FromQuery] Guid? courseId = null,
-        [FromQuery] Guid? levelId = null, [FromQuery] Guid? subjectId = null,
-        [FromQuery] string? difficulty = null)
+    public async Task<IActionResult> GetQuestions(
+        [FromQuery] int? courseId = null,
+        [FromQuery] int? levelId = null,
+        [FromQuery] int? subjectId = null
+    )
     {
-        var questions = await _questionBankService.GetQuestionsAsync(courseId, levelId, subjectId, difficulty);
+        var questions = await _questionBankService.GetQuestionsAsync(courseId, levelId, subjectId);
         return Ok(questions);
     }
 }
 
 public class AddQuestionRequest
 {
-    public Guid CourseId { get; set; }
-    public Guid LevelId { get; set; }
-    public Guid SubjectId { get; set; }
+    public int CourseId { get; set; }
+    public int LevelId { get; set; }
+    public int SubjectId { get; set; }
     public string QuestionText { get; set; } = string.Empty;
     public string Options { get; set; } = string.Empty;
     public string CorrectAnswer { get; set; } = string.Empty;
     public string Explanation { get; set; } = string.Empty;
-    public string Difficulty { get; set; } = "Medium";
 }
 
 public class UpdateQuestionRequest
@@ -72,5 +86,4 @@ public class UpdateQuestionRequest
     public string Options { get; set; } = string.Empty;
     public string CorrectAnswer { get; set; } = string.Empty;
     public string Explanation { get; set; } = string.Empty;
-    public string Difficulty { get; set; } = "Medium";
 }

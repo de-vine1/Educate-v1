@@ -8,7 +8,7 @@ public interface IDashboardService
     Task<IEnumerable<object>> GetPaymentHistoryAsync(string userId);
     Task<bool> UpdateProgressAsync(
         string userId,
-        Guid subjectId,
+        int subjectId,
         string status,
         decimal? score = null
     );

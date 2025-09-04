@@ -6,7 +6,7 @@ namespace Educate.Domain.Entities;
 public class Notification
 {
     [Key]
-    public Guid NotificationId { get; set; } = Guid.NewGuid();
+    public int NotificationId { get; set; }
 
     [Required]
     public string UserId { get; set; } = string.Empty;

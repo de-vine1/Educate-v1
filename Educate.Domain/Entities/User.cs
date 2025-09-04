@@ -1,5 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 using Microsoft.AspNetCore.Identity;
+using Educate.Domain.Enums;
 
 namespace Educate.Domain.Entities;
 
@@ -18,8 +19,7 @@ public class User : IdentityUser
 
     public string? EncryptedPersonalData { get; set; }
 
-    [MaxLength(20)]
-    public string? SubscriptionStatus { get; set; }
+    public SubscriptionStatus? SubscriptionStatus { get; set; }
 
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime? LastLoginAt { get; set; }

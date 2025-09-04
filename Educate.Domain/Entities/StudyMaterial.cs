@@ -6,10 +6,10 @@ namespace Educate.Domain.Entities;
 public class StudyMaterial
 {
     [Key]
-    public Guid MaterialId { get; set; } = Guid.NewGuid();
+    public int MaterialId { get; set; }
 
     [Required]
-    public Guid SubjectId { get; set; }
+    public int SubjectId { get; set; }
 
     [Required]
     [MaxLength(200)]

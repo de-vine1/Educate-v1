@@ -50,7 +50,7 @@ public class TestController : ControllerBase
     }
 
     [HttpGet("session/{sessionId}")]
-    public async Task<IActionResult> GetTestSession(Guid sessionId)
+    public async Task<IActionResult> GetTestSession(int sessionId)
     {
         var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
         if (string.IsNullOrEmpty(userId))
@@ -61,7 +61,7 @@ public class TestController : ControllerBase
     }
 
     [HttpPost("session/{sessionId}/answer")]
-    public async Task<IActionResult> SubmitAnswer(Guid sessionId, [FromBody] SubmitAnswerRequest request)
+    public async Task<IActionResult> SubmitAnswer(int sessionId, [FromBody] SubmitAnswerRequest request)
     {
         var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
         if (string.IsNullOrEmpty(userId))
@@ -72,7 +72,7 @@ public class TestController : ControllerBase
     }
 
     [HttpPost("session/{sessionId}/complete")]
-    public async Task<IActionResult> CompleteTest(Guid sessionId)
+    public async Task<IActionResult> CompleteTest(int sessionId)
     {
         var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
         if (string.IsNullOrEmpty(userId))
@@ -83,7 +83,7 @@ public class TestController : ControllerBase
     }
 
     [HttpGet("results/{attemptId}")]
-    public async Task<IActionResult> GetTestResults(Guid attemptId)
+    public async Task<IActionResult> GetTestResults(int attemptId)
     {
         var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
         if (string.IsNullOrEmpty(userId))
@@ -118,18 +118,18 @@ public class TestController : ControllerBase
 
 public class StartPracticeTestRequest
 {
-    public Guid SubjectId { get; set; }
+    public int SubjectId { get; set; }
     public int QuestionCount { get; set; } = 10;
 }
 
 public class StartMockExamRequest
 {
-    public Guid CourseId { get; set; }
-    public Guid LevelId { get; set; }
+    public int CourseId { get; set; }
+    public int LevelId { get; set; }
 }
 
 public class SubmitAnswerRequest
 {
-    public Guid QuestionId { get; set; }
+    public int QuestionId { get; set; }
     public string Answer { get; set; } = string.Empty;
 }

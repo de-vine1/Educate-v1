@@ -6,13 +6,13 @@ namespace Educate.Domain.Entities;
 public class PracticeMaterial
 {
     [Key]
-    public Guid Id { get; set; }
+    public int Id { get; set; }
 
     [Required]
-    public Guid CourseId { get; set; }
+    public int CourseId { get; set; }
 
     [Required]
-    public Guid LevelId { get; set; }
+    public int LevelId { get; set; }
 
     [Required]
     [MaxLength(200)]

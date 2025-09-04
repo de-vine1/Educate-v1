@@ -120,8 +120,8 @@ public class PaymentController : ControllerBase
 
         var testRequest = new PaymentInitializationRequest
         {
-            CourseId = Guid.NewGuid(), // Test course ID
-            LevelId = Guid.NewGuid(), // Test level ID
+            CourseId = 1, // Test course ID
+            LevelId = 1, // Test level ID
             PaymentProvider = "Monnify",
         };
 
@@ -139,8 +139,8 @@ public class PaymentController : ControllerBase
 
         var testRequest = new PaymentInitializationRequest
         {
-            CourseId = Guid.NewGuid(), // Test course ID
-            LevelId = Guid.NewGuid(), // Test level ID
+            CourseId = 1, // Test course ID
+            LevelId = 1, // Test level ID
             PaymentProvider = "Paystack",
         };
 

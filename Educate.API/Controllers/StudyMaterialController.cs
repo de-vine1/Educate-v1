@@ -18,7 +18,7 @@ public class StudyMaterialController : ControllerBase
     }
 
     [HttpGet("subject/{subjectId}")]
-    public async Task<IActionResult> GetMaterialsBySubject(Guid subjectId)
+    public async Task<IActionResult> GetMaterialsBySubject(int subjectId)
     {
         var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
         if (userId == null)
@@ -29,7 +29,7 @@ public class StudyMaterialController : ControllerBase
     }
 
     [HttpGet("{materialId}")]
-    public async Task<IActionResult> GetMaterial(Guid materialId)
+    public async Task<IActionResult> GetMaterial(int materialId)
     {
         var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
         if (userId == null)
@@ -43,7 +43,7 @@ public class StudyMaterialController : ControllerBase
     }
 
     [HttpGet("{materialId}/access")]
-    public async Task<IActionResult> CheckMaterialAccess(Guid materialId)
+    public async Task<IActionResult> CheckMaterialAccess(int materialId)
     {
         var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
         if (userId == null)

@@ -90,7 +90,7 @@ public class SubscriptionController : ControllerBase
     }
 
     [HttpGet("renewal-status/{courseId}/{levelId}")]
-    public async Task<IActionResult> GetRenewalStatus(Guid courseId, Guid levelId)
+    public async Task<IActionResult> GetRenewalStatus(int courseId, int levelId)
     {
         var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
         if (userId == null)
@@ -128,6 +128,6 @@ public class SubscriptionController : ControllerBase
 
 public class RenewalRequest
 {
-    public Guid CourseId { get; set; }
-    public Guid LevelId { get; set; }
+    public int CourseId { get; set; }
+    public int LevelId { get; set; }
 }

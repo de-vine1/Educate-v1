@@ -1,6 +1,7 @@
 using Educate.Application.Interfaces;
 using Educate.Application.Models.DTOs;
 using Educate.Domain.Entities;
+using Educate.Domain.Enums;
 using Educate.Infrastructure.Database;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -67,9 +68,9 @@ public class EnrollmentController : ControllerBase
         {
             UserId = userId,
             Amount = 50000, // ₦50,000 for 6-month subscription
-            Provider = "Paystack",
+            Provider = PaymentProvider.Paystack,
             Reference = Guid.NewGuid().ToString(),
-            Status = "Pending",
+            Status = PaymentStatus.Pending,
         };
 
         _context.Payments.Add(payment);
@@ -116,9 +117,9 @@ public class EnrollmentController : ControllerBase
             return NotFound("Payment not found");
 
         // Update payment status
-        payment.Status = dto.Status == "success" ? "Success" : "Failed";
+        payment.Status = dto.Status == "success" ? PaymentStatus.Success : PaymentStatus.Failed;
 
-        if (payment.Status == "Success")
+        if (payment.Status == PaymentStatus.Success)
         {
             // Activate user course subscription
             var userCourse = await _context
@@ -149,7 +150,9 @@ public class EnrollmentController : ControllerBase
 
         await _context.SaveChangesAsync();
 
-        return Ok(new { Success = payment.Status == "Success", Status = payment.Status });
+        return Ok(
+            new { Success = payment.Status == PaymentStatus.Success, Status = payment.Status }
+        );
     }
 
     [HttpGet("my-enrollments")]
@@ -183,7 +186,7 @@ public class EnrollmentController : ControllerBase
     }
 
     [HttpPost("renew/{userCourseId}")]
-    public async Task<IActionResult> RenewSubscription(Guid userCourseId)
+    public async Task<IActionResult> RenewSubscription(int userCourseId)
     {
         var userId = User.FindFirst("sub")?.Value;
         if (string.IsNullOrEmpty(userId))
@@ -202,9 +205,9 @@ public class EnrollmentController : ControllerBase
         {
             UserId = userId,
             Amount = 50000, // ₦50,000 for 6-month renewal
-            Provider = "Paystack",
+            Provider = PaymentProvider.Paystack,
             Reference = Guid.NewGuid().ToString(),
-            Status = "Pending",
+            Status = PaymentStatus.Pending,
         };
 
         _context.Payments.Add(payment);

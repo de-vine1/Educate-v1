@@ -54,7 +54,7 @@ public class StudentController : ControllerBase
     }
 
     [HttpGet("materials/{courseId}/{levelId}")]
-    public async Task<IActionResult> GetMaterials(Guid courseId, Guid levelId)
+    public async Task<IActionResult> GetMaterials(int courseId, int levelId)
     {
         var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
         if (string.IsNullOrEmpty(userId))

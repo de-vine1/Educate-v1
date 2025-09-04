@@ -6,20 +6,20 @@ namespace Educate.Domain.Entities;
 public class SubscriptionHistory
 {
     [Key]
-    public Guid Id { get; set; } = Guid.NewGuid();
+    public int Id { get; set; }
 
     [Required]
-    public Guid SubscriptionId { get; set; }
+    public int SubscriptionId { get; set; }
 
     [Required]
     [MaxLength(450)]
     public string UserId { get; set; } = string.Empty;
 
     [Required]
-    public Guid CourseId { get; set; }
+    public int CourseId { get; set; }
 
     [Required]
-    public Guid LevelId { get; set; }
+    public int LevelId { get; set; }
 
     [Required]
     [MaxLength(20)]

@@ -1,32 +1,31 @@
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using Educate.Domain.Enums;
 
 namespace Educate.Domain.Entities;
 
 public class Payment
 {
     [Key]
-    public Guid PaymentId { get; set; } = Guid.NewGuid();
+    public int PaymentId { get; set; }
 
     [Required]
     public string UserId { get; set; } = string.Empty;
 
-    public Guid? CourseId { get; set; }
-    public Guid? LevelId { get; set; }
+    public int? CourseId { get; set; }
+    public int? LevelId { get; set; }
 
     [Column(TypeName = "decimal(18,2)")]
     public decimal Amount { get; set; }
 
     [Required]
-    [MaxLength(50)]
-    public string Provider { get; set; } = string.Empty; // Paystack, Monnify
+    public PaymentProvider Provider { get; set; }
 
     [Required]
     public string Reference { get; set; } = string.Empty; // Unique payment reference
 
     [Required]
-    [MaxLength(20)]
-    public string Status { get; set; } = "Pending"; // Pending, Success, Failed
+    public PaymentStatus Status { get; set; } = PaymentStatus.Pending;
 
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 

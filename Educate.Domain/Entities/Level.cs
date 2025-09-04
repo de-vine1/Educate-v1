@@ -6,10 +6,10 @@ namespace Educate.Domain.Entities;
 public class Level
 {
     [Key]
-    public Guid LevelId { get; set; } = Guid.NewGuid();
+    public int LevelId { get; set; }
 
     [Required]
-    public Guid CourseId { get; set; }
+    public int CourseId { get; set; }
 
     [Required]
     [MaxLength(100)]

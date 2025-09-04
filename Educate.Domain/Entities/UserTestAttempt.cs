@@ -5,18 +5,18 @@ namespace Educate.Domain.Entities;
 public class UserTestAttempt
 {
     [Key]
-    public Guid AttemptId { get; set; } = Guid.NewGuid();
+    public int AttemptId { get; set; }
 
     public string UserId { get; set; } = string.Empty;
     public User User { get; set; } = null!;
 
-    public Guid CourseId { get; set; }
+    public int CourseId { get; set; }
     public Course Course { get; set; } = null!;
 
-    public Guid LevelId { get; set; }
+    public int LevelId { get; set; }
     public Level Level { get; set; } = null!;
 
-    public Guid? SubjectId { get; set; } // Null for full mock exams
+    public int? SubjectId { get; set; } // Null for full mock exams
     public Subject? Subject { get; set; }
 
     [Required]

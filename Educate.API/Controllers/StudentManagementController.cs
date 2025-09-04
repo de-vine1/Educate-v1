@@ -109,20 +109,20 @@ public class StudentManagementController : ControllerBase
 
 public class ExtendSubscriptionRequest
 {
-    public Guid CourseId { get; set; }
-    public Guid LevelId { get; set; }
+    public int CourseId { get; set; }
+    public int LevelId { get; set; }
     public int Months { get; set; }
 }
 
 public class ToggleScholarshipRequest
 {
-    public Guid CourseId { get; set; }
-    public Guid LevelId { get; set; }
+    public int CourseId { get; set; }
+    public int LevelId { get; set; }
 }
 
 public class ResetTestsRequest
 {
-    public Guid? CourseId { get; set; }
+    public int? CourseId { get; set; }
 }
 
 public class SendAnnouncementRequest

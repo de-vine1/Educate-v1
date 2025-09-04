@@ -3,31 +3,28 @@ namespace Educate.Application.Interfaces;
 public interface IQuestionBankService
 {
     Task<bool> AddQuestionAsync(
-        Guid courseId,
-        Guid levelId,
-        Guid subjectId,
+        int courseId,
+        int levelId,
+        int subjectId,
         string questionText,
         string options,
         string correctAnswer,
         string explanation,
-        string difficulty,
         string createdBy
     );
     Task<bool> UpdateQuestionAsync(
-        Guid questionId,
+        int questionId,
         string questionText,
         string options,
         string correctAnswer,
-        string explanation,
-        string difficulty
+        string explanation
     );
-    Task<bool> ToggleQuestionStatusAsync(Guid questionId);
+    Task<bool> ToggleQuestionStatusAsync(int questionId);
     Task<IEnumerable<object>> GetQuestionsAsync(
-        Guid? courseId = null,
-        Guid? levelId = null,
-        Guid? subjectId = null,
-        string? difficulty = null
+        int? courseId = null,
+        int? levelId = null,
+        int? subjectId = null
     );
-    Task<IEnumerable<object>> GetRandomQuestionsAsync(Guid subjectId, int count);
-    Task<IEnumerable<object>> GetMockExamQuestionsAsync(Guid courseId, Guid levelId, int count);
+    Task<IEnumerable<object>> GetRandomQuestionsAsync(int subjectId, int count);
+    Task<IEnumerable<object>> GetMockExamQuestionsAsync(int courseId, int levelId, int count);
 }

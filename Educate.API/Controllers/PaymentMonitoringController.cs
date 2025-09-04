@@ -1,3 +1,4 @@
+using Educate.Domain.Enums;
 using Educate.Infrastructure.Database;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -23,14 +24,24 @@ public class PaymentMonitoringController : ControllerBase
         var stats = new
         {
             TotalPayments = await _context.Payments.CountAsync(),
-            SuccessfulPayments = await _context.Payments.CountAsync(p => p.Status == "Success"),
-            FailedPayments = await _context.Payments.CountAsync(p => p.Status == "Failed"),
-            PendingPayments = await _context.Payments.CountAsync(p => p.Status == "Pending"),
+            SuccessfulPayments = await _context.Payments.CountAsync(p =>
+                p.Status == PaymentStatus.Success
+            ),
+            FailedPayments = await _context.Payments.CountAsync(p =>
+                p.Status == PaymentStatus.Failed
+            ),
+            PendingPayments = await _context.Payments.CountAsync(p =>
+                p.Status == PaymentStatus.Pending
+            ),
             TotalRevenue = await _context
-                .Payments.Where(p => p.Status == "Success")
+                .Payments.Where(p => p.Status == PaymentStatus.Success)
                 .SumAsync(p => p.Amount),
-            PaystackPayments = await _context.Payments.CountAsync(p => p.Provider == "Paystack"),
-            MonnifyPayments = await _context.Payments.CountAsync(p => p.Provider == "Monnify"),
+            PaystackPayments = await _context.Payments.CountAsync(p =>
+                p.Provider == PaymentProvider.Paystack
+            ),
+            MonnifyPayments = await _context.Payments.CountAsync(p =>
+                p.Provider == PaymentProvider.Monnify
+            ),
         };
 
         return Ok(stats);
@@ -43,7 +54,7 @@ public class PaymentMonitoringController : ControllerBase
 
         var failures = await _context
             .Payments.Include(p => p.User)
-            .Where(p => p.Status == "Failed" && p.CreatedAt >= cutoffTime)
+            .Where(p => p.Status == PaymentStatus.Failed && p.CreatedAt >= cutoffTime)
             .Select(p => new
             {
                 p.PaymentId,
@@ -72,9 +83,9 @@ public class PaymentMonitoringController : ControllerBase
             {
                 Date = g.Key,
                 TotalPayments = g.Count(),
-                SuccessfulPayments = g.Count(p => p.Status == "Success"),
-                FailedPayments = g.Count(p => p.Status == "Failed"),
-                Revenue = g.Where(p => p.Status == "Success").Sum(p => p.Amount),
+                SuccessfulPayments = g.Count(p => p.Status == PaymentStatus.Success),
+                FailedPayments = g.Count(p => p.Status == PaymentStatus.Failed),
+                Revenue = g.Where(p => p.Status == PaymentStatus.Success).Sum(p => p.Amount),
             })
             .OrderBy(s => s.Date)
             .ToListAsync();

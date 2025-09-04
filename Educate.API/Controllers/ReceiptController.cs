@@ -22,7 +22,7 @@ public class ReceiptController : ControllerBase
     }
 
     [HttpGet("{receiptId}/download")]
-    public async Task<IActionResult> DownloadReceipt(Guid receiptId)
+    public async Task<IActionResult> DownloadReceipt(int receiptId)
     {
         var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
 

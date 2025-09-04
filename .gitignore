@@ -63,6 +63,7 @@ nunit-*.xml
 
 # Documentation and text files
 *.md
+!API_DOCUMENTATION.md
 *.txt
 
 # User-specific files

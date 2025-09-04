@@ -2,8 +2,8 @@ namespace Educate.Application.Models.DTOs;
 
 public class PaymentInitializationRequest
 {
-    public Guid CourseId { get; set; }
-    public Guid LevelId { get; set; }
+    public int CourseId { get; set; }
+    public int LevelId { get; set; }
     public string PaymentProvider { get; set; } = string.Empty; // "Paystack" or "Monnify"
 }
 

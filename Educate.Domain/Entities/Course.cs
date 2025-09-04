@@ -6,7 +6,7 @@ namespace Educate.Domain.Entities;
 public class Course
 {
     [Key]
-    public Guid CourseId { get; set; } = Guid.NewGuid();
+    public int CourseId { get; set; }
 
     [Required]
     [MaxLength(200)]

@@ -86,7 +86,7 @@ public class DashboardController : ControllerBase
     }
 
     [HttpGet("access-check/{courseId}/{levelId}")]
-    public async Task<IActionResult> CheckAccess(Guid courseId, Guid levelId)
+    public async Task<IActionResult> CheckAccess(int courseId, int levelId)
     {
         var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
         if (userId == null)
@@ -103,7 +103,7 @@ public class DashboardController : ControllerBase
 
 public class UpdateProgressRequest
 {
-    public Guid SubjectId { get; set; }
+    public int SubjectId { get; set; }
     public string Status { get; set; } = string.Empty;
     public decimal? Score { get; set; }
 }

@@ -5,7 +5,7 @@ namespace Educate.Domain.Entities;
 public class AdminAlert
 {
     [Key]
-    public Guid AlertId { get; set; } = Guid.NewGuid();
+    public int AlertId { get; set; }
 
     [Required]
     public string AlertType { get; set; } = string.Empty; // PaymentFailure, SubscriptionExpiry, BulkUploadFailed

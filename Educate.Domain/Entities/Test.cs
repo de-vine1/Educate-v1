@@ -6,10 +6,10 @@ namespace Educate.Domain.Entities;
 public class Test
 {
     [Key]
-    public Guid Id { get; set; }
+    public int Id { get; set; }
 
     [Required]
-    public Guid CourseId { get; set; }
+    public int CourseId { get; set; }
 
     [Required]
     [MaxLength(200)]
@@ -25,14 +25,14 @@ public class Test
 public class TestResult
 {
     [Key]
-    public Guid Id { get; set; }
+    public int Id { get; set; }
 
     [Required]
     [MaxLength(450)]
     public string UserId { get; set; } = string.Empty;
 
     [Required]
-    public Guid TestId { get; set; }
+    public int TestId { get; set; }
 
     public int Score { get; set; }
     public DateTime CompletedAt { get; set; } = DateTime.UtcNow;

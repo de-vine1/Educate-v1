@@ -2,8 +2,8 @@ namespace Educate.Application.Models.DTOs;
 
 public class LevelDto
 {
-    public Guid LevelId { get; set; }
-    public Guid CourseId { get; set; }
+    public int LevelId { get; set; }
+    public int CourseId { get; set; }
     public string Name { get; set; } = string.Empty;
     public int Order { get; set; }
     public DateTime CreatedAt { get; set; }
@@ -13,7 +13,7 @@ public class LevelDto
 
 public class CreateLevelDto
 {
-    public Guid CourseId { get; set; }
+    public int CourseId { get; set; }
     public string Name { get; set; } = string.Empty;
     public int Order { get; set; }
 }

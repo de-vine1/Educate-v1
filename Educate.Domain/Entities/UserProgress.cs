@@ -6,20 +6,20 @@ namespace Educate.Domain.Entities;
 public class UserProgress
 {
     [Key]
-    public Guid ProgressId { get; set; } = Guid.NewGuid();
+    public int ProgressId { get; set; }
 
     [Required]
     [MaxLength(450)]
     public string UserId { get; set; } = string.Empty;
 
     [Required]
-    public Guid CourseId { get; set; }
+    public int CourseId { get; set; }
 
     [Required]
-    public Guid LevelId { get; set; }
+    public int LevelId { get; set; }
 
     [Required]
-    public Guid SubjectId { get; set; }
+    public int SubjectId { get; set; }
 
     [Required]
     [MaxLength(20)]

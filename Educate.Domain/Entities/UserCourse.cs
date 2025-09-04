@@ -6,16 +6,16 @@ namespace Educate.Domain.Entities;
 public class UserCourse
 {
     [Key]
-    public Guid UserCourseId { get; set; } = Guid.NewGuid();
+    public int UserCourseId { get; set; }
 
     [Required]
     public string UserId { get; set; } = string.Empty;
 
     [Required]
-    public Guid CourseId { get; set; }
+    public int CourseId { get; set; }
 
     [Required]
-    public Guid LevelId { get; set; }
+    public int LevelId { get; set; }
 
     public DateTime SubscriptionStartDate { get; set; } = DateTime.UtcNow;
     public DateTime SubscriptionEndDate { get; set; }
@@ -25,7 +25,7 @@ public class UserCourse
     public string Status { get; set; } = "Active"; // Active, ExpiringSoon, Expired, Renewed
 
     public int RenewalCount { get; set; } = 0;
-    public Guid PaymentId { get; set; }
+    public int PaymentId { get; set; }
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 

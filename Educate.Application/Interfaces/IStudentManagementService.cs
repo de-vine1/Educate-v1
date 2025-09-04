@@ -10,13 +10,13 @@ public interface IStudentManagementService
     Task<object> GetStudentDetailsAsync(string userId);
     Task<bool> ExtendSubscriptionAsync(
         string userId,
-        Guid courseId,
-        Guid levelId,
+        int courseId,
+        int levelId,
         int months,
         string adminId
     );
-    Task<bool> ToggleScholarshipAsync(string userId, Guid courseId, Guid levelId, string adminId);
-    Task<bool> ResetTestAttemptsAsync(string userId, Guid? courseId = null, string adminId = "");
+    Task<bool> ToggleScholarshipAsync(string userId, int courseId, int levelId, string adminId);
+    Task<bool> ResetTestAttemptsAsync(string userId, int? courseId = null, string adminId = "");
     Task<object> SendAnnouncementAsync(
         string title,
         string message,

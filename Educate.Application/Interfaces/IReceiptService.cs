@@ -2,7 +2,7 @@ namespace Educate.Application.Interfaces;
 
 public interface IReceiptService
 {
-    Task<string> GenerateReceiptAsync(Guid paymentId);
-    Task<byte[]> GetReceiptPdfAsync(Guid receiptId);
-    Task SendReceiptEmailAsync(Guid paymentId);
+    Task<string> GenerateReceiptAsync(int paymentId);
+    Task<byte[]> GetReceiptPdfAsync(int receiptId);
+    Task SendReceiptEmailAsync(int paymentId);
 }

@@ -1,17 +1,18 @@
 using System.ComponentModel.DataAnnotations;
+using Educate.Domain.Enums;
 
 namespace Educate.Domain.Entities;
 
 public class BulkUploadLog
 {
     [Key]
-    public Guid UploadId { get; set; } = Guid.NewGuid();
+    public int UploadId { get; set; }
 
     public string AdminId { get; set; } = string.Empty;
     public User Admin { get; set; } = null!;
 
     [Required]
-    public string UploadType { get; set; } = string.Empty; // Courses, Students, Questions
+    public UploadType UploadType { get; set; }
 
     [Required]
     public string FileName { get; set; } = string.Empty;
@@ -23,7 +24,7 @@ public class BulkUploadLog
     public string ErrorLog { get; set; } = string.Empty; // JSON array of errors
 
     [Required]
-    public string Status { get; set; } = "Processing"; // Processing, Completed, Failed
+    public UploadStatus Status { get; set; } = UploadStatus.Processing;
 
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime? CompletedAt { get; set; }

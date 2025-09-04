@@ -1,29 +1,29 @@
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using Educate.Domain.Enums;
 
 namespace Educate.Domain.Entities;
 
 public class Subscription
 {
     [Key]
-    public Guid Id { get; set; } = Guid.NewGuid();
+    public int Id { get; set; }
 
     [Required]
     [MaxLength(450)]
     public string UserId { get; set; } = string.Empty;
 
     [Required]
-    public Guid CourseId { get; set; }
+    public int CourseId { get; set; }
 
     [Required]
-    public Guid LevelId { get; set; }
+    public int LevelId { get; set; }
 
     public DateTime StartDate { get; set; }
     public DateTime EndDate { get; set; }
 
     [Required]
-    [MaxLength(20)]
-    public string Status { get; set; } = "Active"; // Active, ExpiringSoon, Expired, Renewed
+    public SubscriptionStatus Status { get; set; } = SubscriptionStatus.Active;
 
     [Column(TypeName = "decimal(18,2)")]
     public decimal AmountPaid { get; set; }

@@ -65,7 +65,7 @@ public class AdminController : ControllerBase
     }
 
     [HttpGet("courses/{id}")]
-    public async Task<IActionResult> GetCourse(Guid id)
+    public async Task<IActionResult> GetCourse(int id)
     {
         var course = await _context
             .Courses.Include(c => c.Levels)
@@ -169,7 +169,7 @@ public class AdminController : ControllerBase
     }
 
     [HttpPut("courses/{id}")]
-    public async Task<IActionResult> UpdateCourse(Guid id, [FromBody] UpdateCourseDto dto)
+    public async Task<IActionResult> UpdateCourse(int id, [FromBody] UpdateCourseDto dto)
     {
         var course = await _context.Courses.FindAsync(id);
         if (course == null)
@@ -205,7 +205,7 @@ public class AdminController : ControllerBase
     }
 
     [HttpDelete("courses/{id}")]
-    public async Task<IActionResult> DeleteCourse(Guid id)
+    public async Task<IActionResult> DeleteCourse(int id)
     {
         var course = await _context.Courses.FindAsync(id);
         if (course == null)
@@ -232,7 +232,7 @@ public class AdminController : ControllerBase
 
     // Level Management - Nested under courses
     [HttpPost("courses/{courseId}/levels")]
-    public async Task<IActionResult> CreateLevel(Guid courseId, [FromBody] CreateLevelDto dto)
+    public async Task<IActionResult> CreateLevel(int courseId, [FromBody] CreateLevelDto dto)
     {
         // Ensure course exists
         if (!await _context.Courses.AnyAsync(c => c.CourseId == courseId))
@@ -294,7 +294,7 @@ public class AdminController : ControllerBase
     }
 
     [HttpGet("levels/{id}")]
-    public async Task<IActionResult> GetLevel(Guid id)
+    public async Task<IActionResult> GetLevel(int id)
     {
         var level = await _context
             .Levels.Include(l => l.Subjects)
@@ -327,7 +327,7 @@ public class AdminController : ControllerBase
     }
 
     [HttpPut("levels/{id}")]
-    public async Task<IActionResult> UpdateLevel(Guid id, [FromBody] UpdateLevelDto dto)
+    public async Task<IActionResult> UpdateLevel(int id, [FromBody] UpdateLevelDto dto)
     {
         var level = await _context.Levels.FindAsync(id);
         if (level == null)
@@ -373,7 +373,7 @@ public class AdminController : ControllerBase
     }
 
     [HttpDelete("levels/{id}")]
-    public async Task<IActionResult> DeleteLevel(Guid id)
+    public async Task<IActionResult> DeleteLevel(int id)
     {
         var level = await _context
             .Levels.Include(l => l.Subjects)
@@ -406,7 +406,7 @@ public class AdminController : ControllerBase
 
     // Subject Management - Nested under levels
     [HttpPost("levels/{levelId}/subjects")]
-    public async Task<IActionResult> CreateSubject(Guid levelId, [FromBody] CreateSubjectDto dto)
+    public async Task<IActionResult> CreateSubject(int levelId, [FromBody] CreateSubjectDto dto)
     {
         // Ensure level exists
         if (!await _context.Levels.AnyAsync(l => l.LevelId == levelId))
@@ -459,7 +459,7 @@ public class AdminController : ControllerBase
     }
 
     [HttpGet("subjects/{id}")]
-    public async Task<IActionResult> GetSubject(Guid id)
+    public async Task<IActionResult> GetSubject(int id)
     {
         var subject = await _context.Subjects.FindAsync(id);
         if (subject == null)
@@ -478,7 +478,7 @@ public class AdminController : ControllerBase
     }
 
     [HttpPut("subjects/{id}")]
-    public async Task<IActionResult> UpdateSubject(Guid id, [FromBody] UpdateSubjectDto dto)
+    public async Task<IActionResult> UpdateSubject(int id, [FromBody] UpdateSubjectDto dto)
     {
         var subject = await _context.Subjects.FindAsync(id);
         if (subject == null)
@@ -515,7 +515,7 @@ public class AdminController : ControllerBase
     }
 
     [HttpDelete("subjects/{id}")]
-    public async Task<IActionResult> DeleteSubject(Guid id)
+    public async Task<IActionResult> DeleteSubject(int id)
     {
         var subject = await _context.Subjects.FindAsync(id);
         if (subject == null)
