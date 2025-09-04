@@ -1,7 +1,7 @@
-using Educate.Infrastructure.Database;
+using System.Security.Claims;
+using Educate.Application.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 
 namespace Educate.API.Controllers;
 
@@ -10,101 +10,100 @@ namespace Educate.API.Controllers;
 [Authorize]
 public class DashboardController : ControllerBase
 {
-    private readonly AppDbContext _context;
+    private readonly IDashboardService _dashboardService;
+    private readonly ISubscriptionService _subscriptionService;
 
-    public DashboardController(AppDbContext context)
+    public DashboardController(
+        IDashboardService dashboardService,
+        ISubscriptionService subscriptionService
+    )
     {
-        _context = context;
+        _dashboardService = dashboardService;
+        _subscriptionService = subscriptionService;
     }
 
-    [HttpGet("overview")]
-    public async Task<IActionResult> GetDashboardOverview()
+    [HttpGet]
+    public async Task<IActionResult> GetDashboard()
     {
-        var userId = User.FindFirst("sub")?.Value;
-        if (string.IsNullOrEmpty(userId))
+        var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        if (userId == null)
             return Unauthorized();
 
-        var activeSubscriptions = await _context
-            .UserCourses.Include(uc => uc.Course)
-            .Include(uc => uc.Level)
-            .Where(uc =>
-                uc.UserId == userId
-                && uc.Status == "Active"
-                && uc.SubscriptionEndDate > DateTime.UtcNow
-            )
-            .Select(uc => new
-            {
-                uc.UserCourseId,
-                CourseName = uc.Course.Name,
-                LevelName = uc.Level.Name,
-                uc.SubscriptionEndDate,
-                DaysRemaining = (uc.SubscriptionEndDate.Date - DateTime.UtcNow.Date).Days,
-                IsExpiringSoon = (uc.SubscriptionEndDate.Date - DateTime.UtcNow.Date).Days <= 7,
-            })
-            .ToListAsync();
+        var dashboardData = await _dashboardService.GetDashboardDataAsync(userId);
+        return Ok(dashboardData);
+    }
 
-        var expiredSubscriptions = await _context
-            .UserCourses.Include(uc => uc.Course)
-            .Include(uc => uc.Level)
-            .Where(uc =>
-                uc.UserId == userId
-                && (uc.Status == "Expired" || uc.SubscriptionEndDate <= DateTime.UtcNow)
-            )
-            .CountAsync();
+    [HttpGet("subscriptions")]
+    public async Task<IActionResult> GetSubscriptions()
+    {
+        var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        if (userId == null)
+            return Unauthorized();
 
-        var totalSpent = await _context
-            .Payments.Where(p => p.UserId == userId && p.Status == "Success")
-            .SumAsync(p => p.Amount);
+        var subscriptions = await _dashboardService.GetUserSubscriptionsAsync(userId);
+        return Ok(subscriptions);
+    }
 
-        return Ok(
-            new
-            {
-                ActiveSubscriptions = activeSubscriptions,
-                ExpiredCount = expiredSubscriptions,
-                TotalActiveCount = activeSubscriptions.Count,
-                TotalSpent = totalSpent,
-                ExpiringSoonCount = activeSubscriptions.Count(s => s.IsExpiringSoon),
-            }
+    [HttpGet("progress")]
+    public async Task<IActionResult> GetProgress()
+    {
+        var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        if (userId == null)
+            return Unauthorized();
+
+        var progress = await _dashboardService.GetProgressSummaryAsync(userId);
+        return Ok(progress);
+    }
+
+    [HttpGet("payments")]
+    public async Task<IActionResult> GetPaymentHistory()
+    {
+        var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        if (userId == null)
+            return Unauthorized();
+
+        var payments = await _dashboardService.GetPaymentHistoryAsync(userId);
+        return Ok(payments);
+    }
+
+    [HttpPost("progress")]
+    public async Task<IActionResult> UpdateProgress([FromBody] UpdateProgressRequest request)
+    {
+        var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        if (userId == null)
+            return Unauthorized();
+
+        var success = await _dashboardService.UpdateProgressAsync(
+            userId,
+            request.SubjectId,
+            request.Status,
+            request.Score
         );
+        if (!success)
+            return BadRequest("Failed to update progress");
+
+        return Ok(new { message = "Progress updated successfully" });
     }
 
-    [HttpGet("available-courses")]
-    public async Task<IActionResult> GetAvailableCourses()
+    [HttpGet("access-check/{courseId}/{levelId}")]
+    public async Task<IActionResult> CheckAccess(Guid courseId, Guid levelId)
     {
-        var userId = User.FindFirst("sub")?.Value;
-        if (string.IsNullOrEmpty(userId))
+        var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        if (userId == null)
             return Unauthorized();
 
-        // Get user's current enrollments
-        var userEnrollments = await _context
-            .UserCourses.Where(uc => uc.UserId == userId && uc.Status == "Active")
-            .Select(uc => new { uc.CourseId, uc.LevelId })
-            .ToListAsync();
-
-        var courses = await _context
-            .Courses.Include(c => c.Levels)
-            .ThenInclude(l => l.Subjects)
-            .Select(c => new
-            {
-                c.CourseId,
-                c.Name,
-                c.Description,
-                Levels = c
-                    .Levels.OrderBy(l => l.Order)
-                    .Select(l => new
-                    {
-                        l.LevelId,
-                        l.Name,
-                        l.Order,
-                        SubjectCount = l.Subjects.Count(),
-                        IsEnrolled = userEnrollments.Any(ue =>
-                            ue.CourseId == c.CourseId && ue.LevelId == l.LevelId
-                        ),
-                        Price = 50000, // Fixed price for now
-                    }),
-            })
-            .ToListAsync();
-
-        return Ok(courses);
+        var hasAccess = await _subscriptionService.HasActiveSubscriptionAsync(
+            userId,
+            courseId,
+            levelId
+        );
+        return Ok(new { hasAccess });
     }
+}
+
+public class UpdateProgressRequest
+{
+    public Guid SubjectId { get; set; }
+    public string Status { get; set; } = string.Empty;
+    public decimal? Score { get; set; }
 }

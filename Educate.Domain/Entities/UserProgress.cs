@@ -3,12 +3,13 @@ using System.ComponentModel.DataAnnotations.Schema;
 
 namespace Educate.Domain.Entities;
 
-public class UserCourse
+public class UserProgress
 {
     [Key]
-    public Guid UserCourseId { get; set; } = Guid.NewGuid();
+    public Guid ProgressId { get; set; } = Guid.NewGuid();
 
     [Required]
+    [MaxLength(450)]
     public string UserId { get; set; } = string.Empty;
 
     [Required]
@@ -17,19 +18,18 @@ public class UserCourse
     [Required]
     public Guid LevelId { get; set; }
 
-    public DateTime SubscriptionStartDate { get; set; } = DateTime.UtcNow;
-    public DateTime SubscriptionEndDate { get; set; }
+    [Required]
+    public Guid SubjectId { get; set; }
 
     [Required]
     [MaxLength(20)]
-    public string Status { get; set; } = "Active"; // Active, ExpiringSoon, Expired, Renewed
+    public string CompletionStatus { get; set; } = "Not Started"; // Not Started, In Progress, Completed
 
-    public int RenewalCount { get; set; } = 0;
-    public Guid PaymentId { get; set; }
+    public decimal? Score { get; set; }
+    public DateTime LastAccessed { get; set; } = DateTime.UtcNow;
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 
-    // Navigation properties
     [ForeignKey("UserId")]
     public virtual User User { get; set; } = null!;
 
@@ -39,6 +39,6 @@ public class UserCourse
     [ForeignKey("LevelId")]
     public virtual Level Level { get; set; } = null!;
 
-    [ForeignKey("PaymentId")]
-    public virtual Payment Payment { get; set; } = null!;
+    [ForeignKey("SubjectId")]
+    public virtual Subject Subject { get; set; } = null!;
 }

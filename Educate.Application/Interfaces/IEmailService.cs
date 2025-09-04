@@ -19,5 +19,14 @@ public interface IEmailService
         string userAgent
     );
     Task SendPasswordSetConfirmationAsync(string toEmail, string userName);
-    Task SendEmailWithAttachmentAsync(string to, string subject, string body, byte[] attachment, string fileName);
+    Task SendEmailWithAttachmentAsync(
+        string to,
+        string subject,
+        string body,
+        byte[] attachment,
+        string fileName
+    );
+    Task SendWelcomeEmailAsync(string toEmail, string firstName, string tempPassword);
+    Task SendAnnouncementEmailAsync(string toEmail, string firstName, string title, string message);
+    Task SendSubscriptionExtensionNotificationAsync(string toEmail, string firstName, int months);
 }

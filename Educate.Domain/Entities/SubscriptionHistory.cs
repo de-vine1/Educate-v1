@@ -3,10 +3,13 @@ using System.ComponentModel.DataAnnotations.Schema;
 
 namespace Educate.Domain.Entities;
 
-public class Subscription
+public class SubscriptionHistory
 {
     [Key]
     public Guid Id { get; set; } = Guid.NewGuid();
+
+    [Required]
+    public Guid SubscriptionId { get; set; }
 
     [Required]
     [MaxLength(450)]
@@ -18,18 +21,25 @@ public class Subscription
     [Required]
     public Guid LevelId { get; set; }
 
-    public DateTime StartDate { get; set; }
-    public DateTime EndDate { get; set; }
-
     [Required]
     [MaxLength(20)]
-    public string Status { get; set; } = "Active"; // Active, ExpiringSoon, Expired, Renewed
+    public string Action { get; set; } = string.Empty; // Created, Renewed, Expired
+
+    [MaxLength(100)]
+    public string PaymentReference { get; set; } = string.Empty;
+
+    [MaxLength(20)]
+    public string PaymentProvider { get; set; } = string.Empty;
 
     [Column(TypeName = "decimal(18,2)")]
-    public decimal AmountPaid { get; set; }
+    public decimal Amount { get; set; }
 
+    public DateTime PreviousEndDate { get; set; }
+    public DateTime NewEndDate { get; set; }
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
-    public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
+
+    [ForeignKey("SubscriptionId")]
+    public virtual UserCourse Subscription { get; set; } = null!;
 
     [ForeignKey("UserId")]
     public virtual User User { get; set; } = null!;

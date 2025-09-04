@@ -15,11 +15,17 @@ public class AdminController : ControllerBase
 {
     private readonly AppDbContext _context;
     private readonly IAuditService _auditService;
+    private readonly ISubscriptionService _subscriptionService;
 
-    public AdminController(AppDbContext context, IAuditService auditService)
+    public AdminController(
+        AppDbContext context,
+        IAuditService auditService,
+        ISubscriptionService subscriptionService
+    )
     {
         _context = context;
         _auditService = auditService;
+        _subscriptionService = subscriptionService;
     }
 
     // Course Management
@@ -542,12 +548,15 @@ public class AdminController : ControllerBase
     public async Task<IActionResult> GetSubscriptionAnalytics()
     {
         var analytics = await _context
-            .Subscriptions.GroupBy(s => s.Course.Name)
+            .UserCourses.Include(uc => uc.Course)
+            .GroupBy(uc => uc.Course.Name)
             .Select(g => new
             {
                 CourseName = g.Key,
-                ActiveSubscriptions = g.Count(s => s.IsActive),
-                TotalRevenue = g.Sum(s => s.AmountPaid),
+                ActiveSubscriptions = g.Count(uc =>
+                    uc.Status == "Active" || uc.Status == "Renewed"
+                ),
+                TotalSubscriptions = g.Count(),
             })
             .ToListAsync();
 
@@ -568,5 +577,69 @@ public class AdminController : ControllerBase
             .ToListAsync();
 
         return Ok(engagement);
+    }
+
+    // Phase 4.7: Admin Panel Controls for Subscriptions
+    [HttpGet("subscriptions")]
+    public async Task<IActionResult> GetAllSubscriptions(
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 50
+    )
+    {
+        var subscriptions = await _subscriptionService.GetAllSubscriptionsAsync();
+        var pagedResult = subscriptions.Skip((page - 1) * pageSize).Take(pageSize);
+
+        return Ok(
+            new
+            {
+                items = pagedResult,
+                totalCount = subscriptions.Count(),
+                page,
+                pageSize,
+            }
+        );
+    }
+
+    [HttpGet("subscriptions/user/{userId}/history")]
+    public async Task<IActionResult> GetUserRenewalHistory(string userId)
+    {
+        var history = await _subscriptionService.GetUserRenewalHistoryAsync(userId);
+        return Ok(history);
+    }
+
+    [HttpGet("reports/renewals-vs-expiries")]
+    public async Task<IActionResult> GetRenewalsVsExpiriesReport(
+        [FromQuery] DateTime? startDate,
+        [FromQuery] DateTime? endDate
+    )
+    {
+        var start = startDate ?? DateTime.UtcNow.AddMonths(-1);
+        var end = endDate ?? DateTime.UtcNow;
+
+        var renewals = await _context
+            .SubscriptionHistories.Where(sh =>
+                sh.Action == "Renewed" && sh.CreatedAt >= start && sh.CreatedAt <= end
+            )
+            .GroupBy(sh => sh.CreatedAt.Date)
+            .Select(g => new { Date = g.Key, Count = g.Count() })
+            .ToListAsync();
+
+        var expiries = await _context
+            .SubscriptionHistories.Where(sh =>
+                sh.Action == "Expired" && sh.CreatedAt >= start && sh.CreatedAt <= end
+            )
+            .GroupBy(sh => sh.CreatedAt.Date)
+            .Select(g => new { Date = g.Key, Count = g.Count() })
+            .ToListAsync();
+
+        return Ok(
+            new
+            {
+                renewals,
+                expiries,
+                startDate = start,
+                endDate = end,
+            }
+        );
     }
 }

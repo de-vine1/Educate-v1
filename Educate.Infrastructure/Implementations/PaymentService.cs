@@ -23,6 +23,7 @@ public class PaymentService : IPaymentService
     private readonly IConfiguration _configuration;
     private readonly IReceiptService _receiptService;
     private readonly IEmailService _emailService;
+    private readonly INotificationService _notificationService;
     private readonly ILogger<PaymentService> _logger;
 
     private static readonly JsonSerializerOptions MonnifyJsonOptions = new()
@@ -44,6 +45,7 @@ public class PaymentService : IPaymentService
         IConfiguration configuration,
         IReceiptService receiptService,
         IEmailService emailService,
+        INotificationService notificationService,
         ILogger<PaymentService> logger
     )
     {
@@ -55,6 +57,7 @@ public class PaymentService : IPaymentService
         _configuration = configuration;
         _receiptService = receiptService;
         _emailService = emailService;
+        _notificationService = notificationService;
         _logger = logger;
     }
 
@@ -322,7 +325,7 @@ public class PaymentService : IPaymentService
         }
     }
 
-    public async Task<bool> ProcessPaystackWebhookAsync(string signature, string payload)
+    public Task<bool> ProcessPaystackWebhookAsync(string signature, string payload)
     {
         if (!VerifyPaystackSignature(payload, signature))
         {
@@ -330,7 +333,7 @@ public class PaymentService : IPaymentService
                 "Invalid Paystack webhook signature received. Payload: {Payload}",
                 payload
             );
-            return false;
+            return Task.FromResult(false);
         }
 
         var webhook = JsonSerializer.Deserialize<PaystackWebhookDto>(
@@ -339,15 +342,15 @@ public class PaymentService : IPaymentService
         );
 
         if (webhook?.Event == null || string.IsNullOrEmpty(webhook.Data?.Reference))
-            return true;
+            return Task.FromResult(true);
 
         _ = Task.Run(async () =>
             await ProcessPaystackEventAsync(webhook.Event, webhook.Data.Reference)
         );
-        return true;
+        return Task.FromResult(true);
     }
 
-    public async Task<bool> ProcessMonnifyWebhookAsync(string signature, string payload)
+    public Task<bool> ProcessMonnifyWebhookAsync(string signature, string payload)
     {
         if (!VerifyMonnifySignature(payload, signature))
         {
@@ -355,7 +358,7 @@ public class PaymentService : IPaymentService
                 "Invalid Monnify webhook signature received. Payload: {Payload}",
                 payload
             );
-            return false;
+            return Task.FromResult(false);
         }
 
         var webhook = JsonSerializer.Deserialize<MonnifyWebhookDto>(
@@ -364,12 +367,12 @@ public class PaymentService : IPaymentService
         );
 
         if (webhook?.EventType == null || string.IsNullOrEmpty(webhook.EventData?.PaymentReference))
-            return true;
+            return Task.FromResult(true);
 
         _ = Task.Run(async () =>
             await ProcessMonnifyEventAsync(webhook.EventType, webhook.EventData.PaymentReference)
         );
-        return true;
+        return Task.FromResult(true);
     }
 
     private bool VerifyPaystackSignature(string payload, string signature)
@@ -474,7 +477,28 @@ public class PaymentService : IPaymentService
                 reference,
                 payment.Status
             );
-            return true; // Idempotency - already processed
+            return true; // Phase 4.6: Idempotency - already processed
+        }
+
+        // Phase 4.6: Block renewals if transaction is still pending
+        if (payment.CourseId.HasValue && payment.LevelId.HasValue)
+        {
+            var pendingRenewal = await _context.Payments.AnyAsync(p =>
+                p.UserId == payment.UserId
+                && p.CourseId == payment.CourseId
+                && p.LevelId == payment.LevelId
+                && p.Status == "Pending"
+                && p.PaymentId != payment.PaymentId
+            );
+
+            if (pendingRenewal)
+            {
+                _logger.LogWarning(
+                    "Blocked renewal attempt - pending transaction exists for user {UserId}",
+                    payment.UserId
+                );
+                return true;
+            }
         }
 
         var isVerified =
@@ -490,7 +514,62 @@ public class PaymentService : IPaymentService
                 reference,
                 payment.UserId
             );
+
+            var isRenewal = await IsRenewalPaymentAsync(
+                payment.UserId,
+                payment.CourseId,
+                payment.LevelId
+            );
             await CreateUserSubscriptionAsync(payment.UserId, payment.PaymentId);
+
+            // Send appropriate notification
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    var course = await _context.Courses.FindAsync(payment.CourseId);
+                    var level = await _context.Levels.FindAsync(payment.LevelId);
+
+                    if (course != null && level != null)
+                    {
+                        if (isRenewal)
+                        {
+                            var subscription = await _context.UserCourses.FirstOrDefaultAsync(uc =>
+                                uc.UserId == payment.UserId
+                                && uc.CourseId == payment.CourseId
+                                && uc.LevelId == payment.LevelId
+                            );
+                            if (subscription != null)
+                            {
+                                await _notificationService.SendRenewalSuccessNotificationAsync(
+                                    payment.UserId,
+                                    course.Name,
+                                    level.Name,
+                                    subscription.SubscriptionEndDate
+                                );
+                            }
+                        }
+                        else
+                        {
+                            await _notificationService.SendPaymentSuccessNotificationAsync(
+                                payment.UserId,
+                                course.Name,
+                                level.Name,
+                                payment.Reference,
+                                payment.Amount
+                            );
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(
+                        ex,
+                        "Failed to send payment notification for {PaymentId}",
+                        payment.PaymentId
+                    );
+                }
+            });
 
             // Generate and send receipt
             _ = Task.Run(async () =>
@@ -618,20 +697,62 @@ public class PaymentService : IPaymentService
         if (payment?.CourseId == null || payment.LevelId == null)
             return;
 
-        // Check if user already has an active subscription for this course/level
+        // Check if user has any subscription for this course/level (active, expired, or expiring)
         var existingSubscription = await _context.UserCourses.FirstOrDefaultAsync(uc =>
             uc.UserId == userId
             && uc.CourseId == payment.CourseId.Value
             && uc.LevelId == payment.LevelId.Value
-            && uc.Status == "Active"
         );
 
         if (existingSubscription != null)
         {
-            // Extend existing subscription by 6 months from current end date
-            existingSubscription.SubscriptionEndDate =
-                existingSubscription.SubscriptionEndDate.AddMonths(6);
+            // Phase 4.5: Renewal payment handling
+            if (existingSubscription.Status == "Expired")
+            {
+                // If expired, set new StartDate = Now, EndDate = Now + 6 months
+                existingSubscription.SubscriptionStartDate = DateTime.UtcNow;
+                existingSubscription.SubscriptionEndDate = DateTime.UtcNow.AddMonths(6);
+            }
+            else
+            {
+                // Extend EndDate by 6 months from current expiry
+                existingSubscription.SubscriptionEndDate =
+                    existingSubscription.SubscriptionEndDate.AddMonths(6);
+            }
+
+            existingSubscription.Status = "Renewed";
+            existingSubscription.RenewalCount += 1;
+            existingSubscription.PaymentId = paymentId;
             existingSubscription.UpdatedAt = DateTime.UtcNow;
+
+            // Phase 4.6: Log all renewal attempts for auditing
+            var previousEndDate = existingSubscription.SubscriptionEndDate;
+            var newEndDate =
+                existingSubscription.Status == "Expired"
+                    ? DateTime.UtcNow.AddMonths(6)
+                    : existingSubscription.SubscriptionEndDate.AddMonths(6);
+
+            var history = new Domain.Entities.SubscriptionHistory
+            {
+                SubscriptionId = existingSubscription.UserCourseId,
+                UserId = userId,
+                CourseId = payment.CourseId.Value,
+                LevelId = payment.LevelId.Value,
+                Action = "Renewed",
+                PaymentReference = payment.Reference,
+                Amount = payment.Amount,
+                PaymentProvider = payment.Provider,
+                PreviousEndDate = previousEndDate,
+                NewEndDate = newEndDate,
+            };
+            _context.SubscriptionHistories.Add(history);
+
+            _logger.LogInformation(
+                "Renewed subscription for user {UserId}, course {CourseId}, level {LevelId}",
+                userId,
+                payment.CourseId.Value,
+                payment.LevelId.Value
+            );
         }
         else
         {
@@ -642,15 +763,48 @@ public class PaymentService : IPaymentService
                 CourseId = payment.CourseId.Value,
                 LevelId = payment.LevelId.Value,
                 SubscriptionStartDate = DateTime.UtcNow,
-                SubscriptionEndDate = DateTime.UtcNow.AddMonths(6), // 6 months as per Phase 3
+                SubscriptionEndDate = DateTime.UtcNow.AddMonths(6),
                 Status = "Active",
                 PaymentId = paymentId,
             };
 
             _context.UserCourses.Add(userCourse);
+
+            // Log creation in history
+            var history = new Domain.Entities.SubscriptionHistory
+            {
+                SubscriptionId = userCourse.UserCourseId,
+                UserId = userId,
+                CourseId = payment.CourseId.Value,
+                LevelId = payment.LevelId.Value,
+                Action = "Created",
+                PaymentReference = payment.Reference,
+                Amount = payment.Amount,
+                PaymentProvider = payment.Provider,
+                PreviousEndDate = DateTime.UtcNow,
+                NewEndDate = DateTime.UtcNow.AddMonths(6),
+            };
+            _context.SubscriptionHistories.Add(history);
+
+            _logger.LogInformation(
+                "Created new subscription for user {UserId}, course {CourseId}, level {LevelId}",
+                userId,
+                payment.CourseId.Value,
+                payment.LevelId.Value
+            );
         }
 
         await _context.SaveChangesAsync();
+    }
+
+    private Task<bool> IsRenewalPaymentAsync(string userId, Guid? courseId, Guid? levelId)
+    {
+        if (!courseId.HasValue || !levelId.HasValue)
+            return Task.FromResult(false);
+
+        return _context.UserCourses.AnyAsync(uc =>
+            uc.UserId == userId && uc.CourseId == courseId.Value && uc.LevelId == levelId.Value
+        );
     }
 
     private async Task ProcessPaystackEventAsync(string eventType, string reference)
@@ -731,9 +885,9 @@ public class PaymentService : IPaymentService
         }
     }
 
-    private async Task SendPaymentFailedEmailAsync(string email, string firstName, string reference)
+    private Task SendPaymentFailedEmailAsync(string email, string firstName, string reference)
     {
-        await _emailService.SendEmailAsync(
+        return _emailService.SendEmailAsync(
             email,
             "Payment Failed - Educate Platform",
             $"Dear {firstName},\n\nYour payment with reference {reference} could not be processed.\n\nPlease try again or contact support if the issue persists.\n\nRetry Payment: https://educate.com/payment/retry\nSupport: support@educate.com\n\nBest regards,\nEducate Platform Team"

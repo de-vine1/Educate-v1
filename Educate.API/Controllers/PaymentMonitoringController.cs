@@ -83,7 +83,7 @@ public class PaymentMonitoringController : ControllerBase
     }
 
     [HttpGet("test-webhook/{provider}")]
-    public async Task<IActionResult> TestWebhook(string provider)
+    public IActionResult TestWebhook(string provider)
     {
         var testPayload = provider.ToLower() switch
         {

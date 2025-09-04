@@ -71,4 +71,15 @@ public class NotificationController : ControllerBase
 
         return Ok(subscriptions);
     }
+
+    [HttpGet("dashboard-banners")]
+    public async Task<IActionResult> GetDashboardBanners()
+    {
+        var userId = User.FindFirst("sub")?.Value;
+        if (string.IsNullOrEmpty(userId))
+            return Unauthorized();
+
+        var banners = await _notificationService.GetDashboardBannersAsync(userId);
+        return Ok(banners);
+    }
 }

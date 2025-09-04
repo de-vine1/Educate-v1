@@ -21,6 +21,14 @@ public class AppDbContext : IdentityDbContext<User>
     public DbSet<PracticeMaterial> PracticeMaterials { get; set; } = null!;
     public DbSet<Test> Tests { get; set; } = null!;
     public DbSet<AuditLog> AuditLogs { get; set; } = null!;
+    public DbSet<SubscriptionHistory> SubscriptionHistories { get; set; } = null!;
+    public DbSet<UserProgress> UserProgresses { get; set; } = null!;
+    public DbSet<StudyMaterial> StudyMaterials { get; set; } = null!;
+    public DbSet<QuestionBank> QuestionBanks { get; set; } = null!;
+    public DbSet<UserTestAttempt> UserTestAttempts { get; set; } = null!;
+    public DbSet<TestSession> TestSessions { get; set; } = null!;
+    public DbSet<BulkUploadLog> BulkUploadLogs { get; set; } = null!;
+    public DbSet<AdminAlert> AdminAlerts { get; set; } = null!;
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

@@ -3,6 +3,7 @@ using System;
 using Educate.Infrastructure.Database;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Educate.Infrastructure.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20250904154029_AddUPandSM")]
+    partial class AddUPandSM
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -240,65 +243,6 @@ namespace Educate.Infrastructure.Migrations
                     b.HasIndex("LevelId");
 
                     b.ToTable("PracticeMaterials");
-                });
-
-            modelBuilder.Entity("Educate.Domain.Entities.QuestionBank", b =>
-                {
-                    b.Property<Guid>("QuestionId")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<string>("CorrectAnswer")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<Guid>("CourseId")
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("CreatedBy")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<string>("Difficulty")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<string>("Explanation")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<bool>("IsActive")
-                        .HasColumnType("boolean");
-
-                    b.Property<Guid>("LevelId")
-                        .HasColumnType("uuid");
-
-                    b.Property<string>("Options")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<string>("QuestionText")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<Guid>("SubjectId")
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTime>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.HasKey("QuestionId");
-
-                    b.HasIndex("CourseId");
-
-                    b.HasIndex("LevelId");
-
-                    b.HasIndex("SubjectId");
-
-                    b.ToTable("QuestionBanks");
                 });
 
             modelBuilder.Entity("Educate.Domain.Entities.Receipt", b =>
@@ -604,68 +548,6 @@ namespace Educate.Infrastructure.Migrations
                     b.ToTable("TestResult");
                 });
 
-            modelBuilder.Entity("Educate.Domain.Entities.TestSession", b =>
-                {
-                    b.Property<Guid>("SessionId")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<Guid>("CourseId")
-                        .HasColumnType("uuid");
-
-                    b.Property<string>("CurrentAnswers")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<int>("CurrentQuestionIndex")
-                        .HasColumnType("integer");
-
-                    b.Property<DateTime?>("EndTime")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<bool>("IsActive")
-                        .HasColumnType("boolean");
-
-                    b.Property<bool>("IsCompleted")
-                        .HasColumnType("boolean");
-
-                    b.Property<Guid>("LevelId")
-                        .HasColumnType("uuid");
-
-                    b.Property<string>("Questions")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<DateTime>("StartTime")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<Guid?>("SubjectId")
-                        .HasColumnType("uuid");
-
-                    b.Property<string>("TestType")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<int>("TimeLimit")
-                        .HasColumnType("integer");
-
-                    b.Property<string>("UserId")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.HasKey("SessionId");
-
-                    b.HasIndex("CourseId");
-
-                    b.HasIndex("LevelId");
-
-                    b.HasIndex("SubjectId");
-
-                    b.HasIndex("UserId");
-
-                    b.ToTable("TestSessions");
-                });
-
             modelBuilder.Entity("Educate.Domain.Entities.User", b =>
                 {
                     b.Property<string>("Id")
@@ -871,70 +753,6 @@ namespace Educate.Infrastructure.Migrations
                     b.ToTable("UserProgresses");
                 });
 
-            modelBuilder.Entity("Educate.Domain.Entities.UserTestAttempt", b =>
-                {
-                    b.Property<Guid>("AttemptId")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<string>("Answers")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<DateTime>("AttemptDate")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<DateTime?>("CompletedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<int>("CorrectAnswers")
-                        .HasColumnType("integer");
-
-                    b.Property<Guid>("CourseId")
-                        .HasColumnType("uuid");
-
-                    b.Property<bool>("IsCompleted")
-                        .HasColumnType("boolean");
-
-                    b.Property<Guid>("LevelId")
-                        .HasColumnType("uuid");
-
-                    b.Property<decimal>("Score")
-                        .HasColumnType("numeric");
-
-                    b.Property<Guid?>("SubjectId")
-                        .HasColumnType("uuid");
-
-                    b.Property<string>("TestType")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<TimeSpan>("TimeTaken")
-                        .HasColumnType("interval");
-
-                    b.Property<int>("TotalQuestions")
-                        .HasColumnType("integer");
-
-                    b.Property<string>("UserId")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<int>("WrongAnswers")
-                        .HasColumnType("integer");
-
-                    b.HasKey("AttemptId");
-
-                    b.HasIndex("CourseId");
-
-                    b.HasIndex("LevelId");
-
-                    b.HasIndex("SubjectId");
-
-                    b.HasIndex("UserId");
-
-                    b.ToTable("UserTestAttempts");
-                });
-
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRole", b =>
                 {
                     b.Property<string>("Id")
@@ -1131,33 +949,6 @@ namespace Educate.Infrastructure.Migrations
                     b.Navigation("Level");
                 });
 
-            modelBuilder.Entity("Educate.Domain.Entities.QuestionBank", b =>
-                {
-                    b.HasOne("Educate.Domain.Entities.Course", "Course")
-                        .WithMany()
-                        .HasForeignKey("CourseId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("Educate.Domain.Entities.Level", "Level")
-                        .WithMany()
-                        .HasForeignKey("LevelId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("Educate.Domain.Entities.Subject", "Subject")
-                        .WithMany()
-                        .HasForeignKey("SubjectId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Course");
-
-                    b.Navigation("Level");
-
-                    b.Navigation("Subject");
-                });
-
             modelBuilder.Entity("Educate.Domain.Entities.Receipt", b =>
                 {
                     b.HasOne("Educate.Domain.Entities.Payment", "Payment")
@@ -1283,39 +1074,6 @@ namespace Educate.Infrastructure.Migrations
                     b.Navigation("User");
                 });
 
-            modelBuilder.Entity("Educate.Domain.Entities.TestSession", b =>
-                {
-                    b.HasOne("Educate.Domain.Entities.Course", "Course")
-                        .WithMany()
-                        .HasForeignKey("CourseId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("Educate.Domain.Entities.Level", "Level")
-                        .WithMany()
-                        .HasForeignKey("LevelId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("Educate.Domain.Entities.Subject", "Subject")
-                        .WithMany()
-                        .HasForeignKey("SubjectId");
-
-                    b.HasOne("Educate.Domain.Entities.User", "User")
-                        .WithMany()
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Course");
-
-                    b.Navigation("Level");
-
-                    b.Navigation("Subject");
-
-                    b.Navigation("User");
-                });
-
             modelBuilder.Entity("Educate.Domain.Entities.UserCourse", b =>
                 {
                     b.HasOne("Educate.Domain.Entities.Course", "Course")
@@ -1370,39 +1128,6 @@ namespace Educate.Infrastructure.Migrations
                         .HasForeignKey("SubjectId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
-
-                    b.HasOne("Educate.Domain.Entities.User", "User")
-                        .WithMany()
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Course");
-
-                    b.Navigation("Level");
-
-                    b.Navigation("Subject");
-
-                    b.Navigation("User");
-                });
-
-            modelBuilder.Entity("Educate.Domain.Entities.UserTestAttempt", b =>
-                {
-                    b.HasOne("Educate.Domain.Entities.Course", "Course")
-                        .WithMany()
-                        .HasForeignKey("CourseId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("Educate.Domain.Entities.Level", "Level")
-                        .WithMany()
-                        .HasForeignKey("LevelId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("Educate.Domain.Entities.Subject", "Subject")
-                        .WithMany()
-                        .HasForeignKey("SubjectId");
 
                     b.HasOne("Educate.Domain.Entities.User", "User")
                         .WithMany()

@@ -153,6 +153,38 @@ Educate Platform Team";
         await _smtpClient.SendMailAsync(mailMessage);
     }
 
+    public async Task SendWelcomeEmailAsync(string toEmail, string firstName, string tempPassword)
+    {
+        var subject = "Welcome to Educate Platform - Account Created";
+        var message =
+            $"Hello {firstName},\n\nYour account has been created successfully.\nTemporary Password: {tempPassword}\n\nPlease login and change your password.";
+        await SendEmailAsync(toEmail, subject, message);
+    }
+
+    public async Task SendAnnouncementEmailAsync(
+        string toEmail,
+        string firstName,
+        string title,
+        string message
+    )
+    {
+        var subject = $"Announcement: {title}";
+        var body = $"Hello {firstName},\n\n{message}\n\nBest regards,\nEducate Team";
+        await SendEmailAsync(toEmail, subject, body);
+    }
+
+    public async Task SendSubscriptionExtensionNotificationAsync(
+        string toEmail,
+        string firstName,
+        int months
+    )
+    {
+        var subject = "Subscription Extended";
+        var message =
+            $"Hello {firstName},\n\nYour subscription has been extended by {months} month(s).\n\nBest regards,\nEducate Team";
+        await SendEmailAsync(toEmail, subject, message);
+    }
+
     public void Dispose()
     {
         _smtpClient?.Dispose();

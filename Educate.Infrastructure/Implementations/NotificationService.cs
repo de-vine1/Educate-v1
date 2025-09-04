@@ -131,6 +131,56 @@ public class NotificationService : INotificationService
         }
     }
 
+    public async Task SendRenewalSuccessNotificationAsync(
+        string userId,
+        string courseName,
+        string levelName,
+        DateTime newExpiryDate
+    )
+    {
+        var user = await _context.Users.FindAsync(userId);
+        if (user == null)
+            return;
+
+        var title = "Subscription Renewed Successfully!";
+        var message =
+            $"Your {courseName} - {levelName} subscription has been renewed until {newExpiryDate:MMM dd, yyyy}.";
+
+        await CreateInAppNotificationAsync(userId, "SUBSCRIPTION_RENEWED", title, message);
+
+        var emailBody =
+            $@"
+            <div style='font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;'>
+                <h2 style='color: #28a745;'>🎉 Subscription Renewed!</h2>
+                <p>Dear {user.FirstName},</p>
+                <p>Great news! Your subscription has been successfully renewed.</p>
+                
+                <div style='background-color: #d4edda; color: #155724; padding: 20px; border-radius: 8px; margin: 20px 0;'>
+                    <h3>Payment Receipt & New Subscription Dates</h3>
+                    <p><strong>Course:</strong> {courseName}</p>
+                    <p><strong>Level:</strong> {levelName}</p>
+                    <p><strong>Renewal Date:</strong> {DateTime.UtcNow:MMM dd, yyyy}</p>
+                    <p><strong>New Expiry Date:</strong> {newExpiryDate:MMM dd, yyyy}</p>
+                    <p><strong>Duration:</strong> 6 months</p>
+                </div>
+
+                <p>Continue enjoying uninterrupted access to all your learning materials!</p>
+                <p><a href='https://yourdomain.com/dashboard' style='background-color: #007bff; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px;'>Access Dashboard</a></p>
+                
+                <p>Best regards,<br>Educate Team</p>
+            </div>";
+
+        try
+        {
+            await _emailService.SendEmailAsync(user.Email!, title, emailBody);
+            await MarkEmailAsSentAsync(userId, "SUBSCRIPTION_RENEWED");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to send renewal success email to user {UserId}", userId);
+        }
+    }
+
     public async Task SendExpiryReminderAsync(
         string userId,
         string courseName,
@@ -144,11 +194,15 @@ public class NotificationService : INotificationService
             return;
 
         var title =
-            daysRemaining <= 1
-                ? "Subscription Expires Today!"
+            daysRemaining <= 0
+                ? "Subscription Expired"
                 : $"Subscription Expiring in {daysRemaining} Days";
+
+        var examType = courseName.Contains("ATS") ? $"ATS{levelName}" : courseName;
         var message =
-            $"Your {courseName} - {levelName} subscription expires on {expiryDate:MMM dd, yyyy}. Renew now to continue access.";
+            daysRemaining <= 0
+                ? $"Your subscription has expired, click here to renew."
+                : $"{examType} subscription expiring in {daysRemaining} days. Renew now to continue learning.";
 
         // Create in-app notification
         await CreateInAppNotificationAsync(userId, "SUBSCRIPTION_EXPIRY", title, message);
@@ -156,23 +210,24 @@ public class NotificationService : INotificationService
         // Send renewal email
         var renewalUrl = $"https://yourdomain.com/renew?course={courseName}&level={levelName}";
         var urgencyColor = daysRemaining <= 1 ? "#dc3545" : "#ffc107";
+        var emailExamType = courseName.Contains("ICAN") ? "ICAN Skills" : courseName;
 
         var emailBody =
             $@"
             <div style='font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;'>
                 <h2 style='color: {urgencyColor};'>⏰ {title}</h2>
                 <p>Dear {user.FirstName},</p>
-                <p>Your subscription for <strong>{courseName} - {levelName}</strong> is about to expire.</p>
+                <p>{(daysRemaining <= 0 ? "Your subscription has expired, click here to renew." : $"Your {emailExamType} subscription is about to expire. Renew now to avoid losing access.")}</p>
                 
                 <div style='background-color: #fff3cd; color: #856404; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid {urgencyColor};'>
                     <h3>Subscription Details</h3>
                     <p><strong>Course:</strong> {courseName}</p>
                     <p><strong>Level:</strong> {levelName}</p>
                     <p><strong>Expires:</strong> {expiryDate:MMM dd, yyyy}</p>
-                    <p><strong>Days Remaining:</strong> {daysRemaining}</p>
+                    <p><strong>Days Remaining:</strong> {Math.Max(0, daysRemaining)}</p>
                 </div>
 
-                <p><strong>Don't lose access!</strong> Renew now to continue enjoying:</p>
+                <p><strong>{(daysRemaining <= 0 ? "Renew now to regain access:" : "Don't lose access! Renew now to continue enjoying:")}</strong></p>
                 <ul>
                     <li>Practice tests and mock exams</li>
                     <li>Study materials and resources</li>
@@ -180,7 +235,7 @@ public class NotificationService : INotificationService
                     <li>Expert support</li>
                 </ul>
 
-                <p><a href='{renewalUrl}' style='background-color: #28a745; color: white; padding: 15px 30px; text-decoration: none; border-radius: 5px; font-weight: bold;'>Renew Subscription</a></p>
+                <p><a href='{renewalUrl}' style='background-color: #28a745; color: white; padding: 15px 30px; text-decoration: none; border-radius: 5px; font-weight: bold;'>{(daysRemaining <= 0 ? "Renew Now" : "Renew Subscription")}</a></p>
                 
                 <p>Best regards,<br>Educate Team</p>
             </div>";
@@ -265,6 +320,44 @@ public class NotificationService : INotificationService
         await _context.SaveChangesAsync();
     }
 
+    public async Task<List<object>> GetDashboardBannersAsync(string userId)
+    {
+        var activeSubscriptions = await _context
+            .UserCourses.Include(uc => uc.Course)
+            .Include(uc => uc.Level)
+            .Where(uc =>
+                uc.UserId == userId
+                && (uc.Status == "ExpiringSoon" || uc.Status == "Expired")
+                && uc.SubscriptionEndDate >= DateTime.UtcNow.AddDays(-30)
+            )
+            .ToListAsync();
+
+        return activeSubscriptions
+            .Select(uc =>
+            {
+                var daysRemaining = (uc.SubscriptionEndDate - DateTime.UtcNow).Days;
+                var examType = uc.Course.Name.Contains("ATS")
+                    ? $"ATS{uc.Level.Name}"
+                    : uc.Course.Name;
+
+                return new
+                {
+                    Type = "subscription_warning",
+                    Priority = uc.Status == "Expired" ? "high" : "medium",
+                    Message = daysRemaining <= 0
+                        ? "Your subscription has expired, click here to renew."
+                        : $"{examType} subscription expiring in {daysRemaining} days. Renew now to continue learning.",
+                    CourseId = uc.CourseId,
+                    LevelId = uc.LevelId,
+                    Status = uc.Status,
+                    DaysRemaining = Math.Max(0, daysRemaining),
+                    RenewUrl = $"/renew?courseId={uc.CourseId}&levelId={uc.LevelId}",
+                };
+            })
+            .Cast<object>()
+            .ToList();
+    }
+
     private async Task MarkEmailAsSentAsync(string userId, string type)
     {
         var notification = await _context
@@ -277,6 +370,17 @@ public class NotificationService : INotificationService
             notification.EmailSent = true;
             await _context.SaveChangesAsync();
         }
+    }
+
+    public async Task SendSubscriptionExtensionNotificationAsync(string userId, int months)
+    {
+        var user = await _context.Users.FindAsync(userId);
+        if (user == null) return;
+
+        var title = "Subscription Extended";
+        var message = $"Your subscription has been extended by {months} month(s) by an administrator.";
+        
+        await CreateInAppNotificationAsync(userId, "SUBSCRIPTION_EXTENDED", title, message);
     }
 
     private static string GetTimeAgo(DateTime dateTime)

@@ -9,11 +9,12 @@ public class SubscriptionBackgroundService : BackgroundService
 {
     private readonly IServiceProvider _serviceProvider;
     private readonly ILogger<SubscriptionBackgroundService> _logger;
-    private readonly TimeSpan _interval = TimeSpan.FromHours(6); // Run every 6 hours
+    private readonly TimeSpan _interval = TimeSpan.FromDays(1); // Run daily
 
     public SubscriptionBackgroundService(
         IServiceProvider serviceProvider,
-        ILogger<SubscriptionBackgroundService> logger)
+        ILogger<SubscriptionBackgroundService> logger
+    )
     {
         _serviceProvider = serviceProvider;
         _logger = logger;
@@ -47,6 +48,7 @@ public class SubscriptionBackgroundService : BackgroundService
 
         _logger.LogInformation("Starting subscription processing at {Time}", DateTime.UtcNow);
 
+        await subscriptionService.UpdateSubscriptionStatusesAsync();
         await subscriptionService.CheckExpiredSubscriptionsAsync();
         await subscriptionService.NotifyExpiringSubscriptionsAsync();
 
