@@ -22,7 +22,7 @@ public class StudyMaterialService : IStudyMaterialService
         _logger = logger;
     }
 
-    public async Task<IEnumerable<object>> GetMaterialsBySubjectAsync(Guid subjectId, string userId)
+    public async Task<IEnumerable<object>> GetMaterialsBySubjectAsync(int subjectId, string userId)
     {
         var subject = await _context
             .Subjects.Include(s => s.Level)
@@ -58,7 +58,7 @@ public class StudyMaterialService : IStudyMaterialService
         return materials;
     }
 
-    public async Task<object?> GetMaterialAsync(Guid materialId, string userId)
+    public async Task<object?> GetMaterialAsync(int materialId, string userId)
     {
         var material = await _context
             .StudyMaterials.Include(sm => sm.Subject)
@@ -86,7 +86,7 @@ public class StudyMaterialService : IStudyMaterialService
         };
     }
 
-    public async Task<bool> CanAccessMaterialAsync(Guid materialId, string userId)
+    public async Task<bool> CanAccessMaterialAsync(int materialId, string userId)
     {
         var material = await _context
             .StudyMaterials.Include(sm => sm.Subject)

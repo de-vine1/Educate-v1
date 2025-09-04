@@ -1,4 +1,5 @@
 using Educate.Application.Interfaces;
+using Educate.Domain.Enums;
 using Educate.Infrastructure.Database;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -131,7 +132,7 @@ public class DashboardService : IDashboardService
                 CourseName = p.Course != null ? p.Course.Name : "N/A",
                 LevelName = p.Level != null ? p.Level.Name : "N/A",
                 p.CreatedAt,
-                CanDownloadReceipt = p.Status == "Success",
+                CanDownloadReceipt = p.Status == PaymentStatus.Success,
             })
             .OrderByDescending(p => p.CreatedAt)
             .ToListAsync();
@@ -139,7 +140,7 @@ public class DashboardService : IDashboardService
 
     public async Task<bool> UpdateProgressAsync(
         string userId,
-        Guid subjectId,
+        int subjectId,
         string status,
         decimal? score = null
     )

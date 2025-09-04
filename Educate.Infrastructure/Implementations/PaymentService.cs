@@ -4,6 +4,7 @@ using System.Text.Json;
 using Educate.Application.Interfaces;
 using Educate.Application.Models.DTOs;
 using Educate.Domain.Entities;
+using Educate.Domain.Enums;
 using Educate.Infrastructure.Configurations;
 using Educate.Infrastructure.Database;
 using Microsoft.EntityFrameworkCore;
@@ -61,7 +62,7 @@ public class PaymentService : IPaymentService
         _logger = logger;
     }
 
-    public async Task<string> ProcessPaymentAsync(string userId, Guid courseId, string cardToken)
+    public async Task<string> ProcessPaymentAsync(string userId, int courseId, string cardToken)
     {
         var reference = Guid.NewGuid().ToString();
 
@@ -69,9 +70,9 @@ public class PaymentService : IPaymentService
         {
             UserId = userId,
             Amount = 5000,
-            Provider = "Paystack",
+            Provider = PaymentProvider.Paystack,
             Reference = reference,
-            Status = "Pending",
+            Status = PaymentStatus.Pending,
         };
 
         _context.Payments.Add(payment);
@@ -83,7 +84,7 @@ public class PaymentService : IPaymentService
     public async Task<bool> VerifyPaymentAsync(string reference)
     {
         var payment = await _context.Payments.FirstOrDefaultAsync(p => p.Reference == reference);
-        return payment?.Status == "Success";
+        return payment?.Status == PaymentStatus.Success;
     }
 
     public async Task<PaymentInitializationResponse> InitializePaymentAsync(
@@ -116,9 +117,9 @@ public class PaymentService : IPaymentService
             CourseId = request.CourseId,
             LevelId = request.LevelId,
             Amount = amount,
-            Provider = request.PaymentProvider,
+            Provider = Enum.Parse<PaymentProvider>(request.PaymentProvider, true),
             Reference = reference,
-            Status = "Pending",
+            Status = PaymentStatus.Pending,
         };
 
         _context.Payments.Add(payment);
@@ -470,7 +471,7 @@ public class PaymentService : IPaymentService
             return true;
         }
 
-        if (payment.Status != "Pending")
+        if (payment.Status != PaymentStatus.Pending)
         {
             _logger.LogInformation(
                 "Duplicate webhook received for payment {Reference} with status {Status}",
@@ -487,7 +488,7 @@ public class PaymentService : IPaymentService
                 p.UserId == payment.UserId
                 && p.CourseId == payment.CourseId
                 && p.LevelId == payment.LevelId
-                && p.Status == "Pending"
+                && p.Status == PaymentStatus.Pending
                 && p.PaymentId != payment.PaymentId
             );
 
@@ -508,7 +509,7 @@ public class PaymentService : IPaymentService
 
         if (isVerified)
         {
-            payment.Status = "Success";
+            payment.Status = PaymentStatus.Success;
             _logger.LogInformation(
                 "Payment {Reference} verified successfully for user {UserId}",
                 reference,
@@ -591,7 +592,7 @@ public class PaymentService : IPaymentService
         }
         else
         {
-            payment.Status = "Failed";
+            payment.Status = PaymentStatus.Failed;
             _logger.LogWarning("Payment verification failed for reference: {Reference}", reference);
 
             // Send payment failed email
@@ -691,7 +692,7 @@ public class PaymentService : IPaymentService
         }
     }
 
-    private async Task CreateUserSubscriptionAsync(string userId, Guid paymentId)
+    private async Task CreateUserSubscriptionAsync(string userId, int paymentId)
     {
         var payment = await _context.Payments.FindAsync(paymentId);
         if (payment?.CourseId == null || payment.LevelId == null)
@@ -741,7 +742,7 @@ public class PaymentService : IPaymentService
                 Action = "Renewed",
                 PaymentReference = payment.Reference,
                 Amount = payment.Amount,
-                PaymentProvider = payment.Provider,
+                PaymentProvider = payment.Provider.ToString(),
                 PreviousEndDate = previousEndDate,
                 NewEndDate = newEndDate,
             };
@@ -780,7 +781,7 @@ public class PaymentService : IPaymentService
                 Action = "Created",
                 PaymentReference = payment.Reference,
                 Amount = payment.Amount,
-                PaymentProvider = payment.Provider,
+                PaymentProvider = payment.Provider.ToString(),
                 PreviousEndDate = DateTime.UtcNow,
                 NewEndDate = DateTime.UtcNow.AddMonths(6),
             };
@@ -797,7 +798,7 @@ public class PaymentService : IPaymentService
         await _context.SaveChangesAsync();
     }
 
-    private Task<bool> IsRenewalPaymentAsync(string userId, Guid? courseId, Guid? levelId)
+    private Task<bool> IsRenewalPaymentAsync(string userId, int? courseId, int? levelId)
     {
         if (!courseId.HasValue || !levelId.HasValue)
             return Task.FromResult(false);
@@ -880,7 +881,7 @@ public class PaymentService : IPaymentService
         var payment = await _context.Payments.FirstOrDefaultAsync(p => p.Reference == reference);
         if (payment != null)
         {
-            payment.Status = "Failed";
+            payment.Status = PaymentStatus.Failed;
             await _context.SaveChangesAsync();
         }
     }

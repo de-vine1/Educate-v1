@@ -150,7 +150,7 @@ public class SubscriptionService : ISubscriptionService
         }
     }
 
-    public async Task<bool> HasActiveSubscriptionAsync(string userId, Guid courseId, Guid levelId)
+    public async Task<bool> HasActiveSubscriptionAsync(string userId, int courseId, int levelId)
     {
         return await _context.UserCourses.AnyAsync(uc =>
             uc.UserId == userId
@@ -186,8 +186,8 @@ public class SubscriptionService : ISubscriptionService
 
     public async Task<bool> RenewSubscriptionAsync(
         string userId,
-        Guid courseId,
-        Guid levelId,
+        int courseId,
+        int levelId,
         string paymentReference
     )
     {
@@ -328,7 +328,7 @@ public class SubscriptionService : ISubscriptionService
             .ToListAsync();
     }
 
-    public async Task<bool> HasActiveSubscriptionAsync(string userId, Guid subjectId)
+    public async Task<bool> HasActiveSubscriptionAsync(string userId, int subjectId)
     {
         var subject = await _context.Subjects.Include(s => s.Level)
             .FirstOrDefaultAsync(s => s.SubjectId == subjectId);
@@ -345,7 +345,7 @@ public class SubscriptionService : ISubscriptionService
         );
     }
 
-    public async Task<bool> HasActiveSubscriptionForLevelAsync(string userId, Guid courseId, Guid levelId)
+    public async Task<bool> HasActiveSubscriptionForLevelAsync(string userId, int courseId, int levelId)
     {
         return await _context.UserCourses.AnyAsync(uc =>
             uc.UserId == userId

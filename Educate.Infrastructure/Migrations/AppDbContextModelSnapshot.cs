@@ -22,6 +22,56 @@ namespace Educate.Infrastructure.Migrations
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
+            modelBuilder.Entity("Educate.Domain.Entities.AdminAlert", b =>
+                {
+                    b.Property<int>("AlertId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("AlertId"));
+
+                    b.Property<string>("AlertType")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("IsRead")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("IsResolved")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("Message")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTime?>("ReadAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("RelatedEntityId")
+                        .HasColumnType("text");
+
+                    b.Property<string>("RelatedEntityType")
+                        .HasColumnType("text");
+
+                    b.Property<DateTime?>("ResolvedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Severity")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.HasKey("AlertId");
+
+                    b.ToTable("AdminAlerts");
+                });
+
             modelBuilder.Entity("Educate.Domain.Entities.AuditLog", b =>
                 {
                     b.Property<int>("Id")
@@ -62,11 +112,61 @@ namespace Educate.Infrastructure.Migrations
                     b.ToTable("AuditLogs");
                 });
 
+            modelBuilder.Entity("Educate.Domain.Entities.BulkUploadLog", b =>
+                {
+                    b.Property<int>("UploadId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("UploadId"));
+
+                    b.Property<string>("AdminId")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTime?>("CompletedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("ErrorLog")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<int>("FailedRows")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("FileName")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("SuccessfulRows")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("TotalRows")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("UploadType")
+                        .HasColumnType("integer");
+
+                    b.HasKey("UploadId");
+
+                    b.HasIndex("AdminId");
+
+                    b.ToTable("BulkUploadLogs");
+                });
+
             modelBuilder.Entity("Educate.Domain.Entities.Course", b =>
                 {
-                    b.Property<Guid>("CourseId")
+                    b.Property<int>("CourseId")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("CourseId"));
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
@@ -91,12 +191,14 @@ namespace Educate.Infrastructure.Migrations
 
             modelBuilder.Entity("Educate.Domain.Entities.Level", b =>
                 {
-                    b.Property<Guid>("LevelId")
+                    b.Property<int>("LevelId")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
+                        .HasColumnType("integer");
 
-                    b.Property<Guid>("CourseId")
-                        .HasColumnType("uuid");
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("LevelId"));
+
+                    b.Property<int>("CourseId")
+                        .HasColumnType("integer");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
@@ -121,9 +223,11 @@ namespace Educate.Infrastructure.Migrations
 
             modelBuilder.Entity("Educate.Domain.Entities.Notification", b =>
                 {
-                    b.Property<Guid>("NotificationId")
+                    b.Property<int>("NotificationId")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("NotificationId"));
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
@@ -161,35 +265,33 @@ namespace Educate.Infrastructure.Migrations
 
             modelBuilder.Entity("Educate.Domain.Entities.Payment", b =>
                 {
-                    b.Property<Guid>("PaymentId")
+                    b.Property<int>("PaymentId")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("PaymentId"));
 
                     b.Property<decimal>("Amount")
                         .HasColumnType("decimal(18,2)");
 
-                    b.Property<Guid?>("CourseId")
-                        .HasColumnType("uuid");
+                    b.Property<int?>("CourseId")
+                        .HasColumnType("integer");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<Guid?>("LevelId")
-                        .HasColumnType("uuid");
+                    b.Property<int?>("LevelId")
+                        .HasColumnType("integer");
 
-                    b.Property<string>("Provider")
-                        .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("character varying(50)");
+                    b.Property<int>("Provider")
+                        .HasColumnType("integer");
 
                     b.Property<string>("Reference")
                         .IsRequired()
                         .HasColumnType("text");
 
-                    b.Property<string>("Status")
-                        .IsRequired()
-                        .HasMaxLength(20)
-                        .HasColumnType("character varying(20)");
+                    b.Property<int>("Status")
+                        .HasColumnType("integer");
 
                     b.Property<string>("UserId")
                         .IsRequired()
@@ -208,16 +310,18 @@ namespace Educate.Infrastructure.Migrations
 
             modelBuilder.Entity("Educate.Domain.Entities.PracticeMaterial", b =>
                 {
-                    b.Property<Guid>("Id")
+                    b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
                     b.Property<string>("Content")
                         .IsRequired()
                         .HasColumnType("text");
 
-                    b.Property<Guid>("CourseId")
-                        .HasColumnType("uuid");
+                    b.Property<int>("CourseId")
+                        .HasColumnType("integer");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
@@ -225,8 +329,8 @@ namespace Educate.Infrastructure.Migrations
                     b.Property<bool>("IsFree")
                         .HasColumnType("boolean");
 
-                    b.Property<Guid>("LevelId")
-                        .HasColumnType("uuid");
+                    b.Property<int>("LevelId")
+                        .HasColumnType("integer");
 
                     b.Property<string>("Title")
                         .IsRequired()
@@ -244,25 +348,23 @@ namespace Educate.Infrastructure.Migrations
 
             modelBuilder.Entity("Educate.Domain.Entities.QuestionBank", b =>
                 {
-                    b.Property<Guid>("QuestionId")
+                    b.Property<int>("QuestionId")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("QuestionId"));
 
                     b.Property<string>("CorrectAnswer")
                         .IsRequired()
                         .HasColumnType("text");
 
-                    b.Property<Guid>("CourseId")
-                        .HasColumnType("uuid");
+                    b.Property<int>("CourseId")
+                        .HasColumnType("integer");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("CreatedBy")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<string>("Difficulty")
                         .IsRequired()
                         .HasColumnType("text");
 
@@ -273,8 +375,8 @@ namespace Educate.Infrastructure.Migrations
                     b.Property<bool>("IsActive")
                         .HasColumnType("boolean");
 
-                    b.Property<Guid>("LevelId")
-                        .HasColumnType("uuid");
+                    b.Property<int>("LevelId")
+                        .HasColumnType("integer");
 
                     b.Property<string>("Options")
                         .IsRequired()
@@ -284,8 +386,8 @@ namespace Educate.Infrastructure.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
-                    b.Property<Guid>("SubjectId")
-                        .HasColumnType("uuid");
+                    b.Property<int>("SubjectId")
+                        .HasColumnType("integer");
 
                     b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
@@ -303,9 +405,11 @@ namespace Educate.Infrastructure.Migrations
 
             modelBuilder.Entity("Educate.Domain.Entities.Receipt", b =>
                 {
-                    b.Property<Guid>("ReceiptId")
+                    b.Property<int>("ReceiptId")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("ReceiptId"));
 
                     b.Property<string>("FilePath")
                         .IsRequired()
@@ -314,8 +418,8 @@ namespace Educate.Infrastructure.Migrations
                     b.Property<DateTime>("GeneratedAt")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<Guid>("PaymentId")
-                        .HasColumnType("uuid");
+                    b.Property<int>("PaymentId")
+                        .HasColumnType("integer");
 
                     b.Property<string>("ReceiptNumber")
                         .IsRequired()
@@ -361,9 +465,11 @@ namespace Educate.Infrastructure.Migrations
 
             modelBuilder.Entity("Educate.Domain.Entities.StudyMaterial", b =>
                 {
-                    b.Property<Guid>("MaterialId")
+                    b.Property<int>("MaterialId")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("MaterialId"));
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
@@ -392,8 +498,8 @@ namespace Educate.Infrastructure.Migrations
                         .HasMaxLength(20)
                         .HasColumnType("character varying(20)");
 
-                    b.Property<Guid>("SubjectId")
-                        .HasColumnType("uuid");
+                    b.Property<int>("SubjectId")
+                        .HasColumnType("integer");
 
                     b.Property<string>("Title")
                         .IsRequired()
@@ -415,15 +521,17 @@ namespace Educate.Infrastructure.Migrations
 
             modelBuilder.Entity("Educate.Domain.Entities.Subject", b =>
                 {
-                    b.Property<Guid>("SubjectId")
+                    b.Property<int>("SubjectId")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("SubjectId"));
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<Guid>("LevelId")
-                        .HasColumnType("uuid");
+                    b.Property<int>("LevelId")
+                        .HasColumnType("integer");
 
                     b.Property<string>("Name")
                         .IsRequired()
@@ -442,15 +550,17 @@ namespace Educate.Infrastructure.Migrations
 
             modelBuilder.Entity("Educate.Domain.Entities.Subscription", b =>
                 {
-                    b.Property<Guid>("Id")
+                    b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
                     b.Property<decimal>("AmountPaid")
                         .HasColumnType("decimal(18,2)");
 
-                    b.Property<Guid>("CourseId")
-                        .HasColumnType("uuid");
+                    b.Property<int>("CourseId")
+                        .HasColumnType("integer");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
@@ -458,16 +568,14 @@ namespace Educate.Infrastructure.Migrations
                     b.Property<DateTime>("EndDate")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<Guid>("LevelId")
-                        .HasColumnType("uuid");
+                    b.Property<int>("LevelId")
+                        .HasColumnType("integer");
 
                     b.Property<DateTime>("StartDate")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<string>("Status")
-                        .IsRequired()
-                        .HasMaxLength(20)
-                        .HasColumnType("character varying(20)");
+                    b.Property<int>("Status")
+                        .HasColumnType("integer");
 
                     b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
@@ -490,9 +598,11 @@ namespace Educate.Infrastructure.Migrations
 
             modelBuilder.Entity("Educate.Domain.Entities.SubscriptionHistory", b =>
                 {
-                    b.Property<Guid>("Id")
+                    b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
                     b.Property<string>("Action")
                         .IsRequired()
@@ -502,14 +612,14 @@ namespace Educate.Infrastructure.Migrations
                     b.Property<decimal>("Amount")
                         .HasColumnType("decimal(18,2)");
 
-                    b.Property<Guid>("CourseId")
-                        .HasColumnType("uuid");
+                    b.Property<int>("CourseId")
+                        .HasColumnType("integer");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<Guid>("LevelId")
-                        .HasColumnType("uuid");
+                    b.Property<int>("LevelId")
+                        .HasColumnType("integer");
 
                     b.Property<DateTime>("NewEndDate")
                         .HasColumnType("timestamp with time zone");
@@ -527,8 +637,8 @@ namespace Educate.Infrastructure.Migrations
                     b.Property<DateTime>("PreviousEndDate")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<Guid>("SubscriptionId")
-                        .HasColumnType("uuid");
+                    b.Property<int>("SubscriptionId")
+                        .HasColumnType("integer");
 
                     b.Property<string>("UserId")
                         .IsRequired()
@@ -550,12 +660,14 @@ namespace Educate.Infrastructure.Migrations
 
             modelBuilder.Entity("Educate.Domain.Entities.Test", b =>
                 {
-                    b.Property<Guid>("Id")
+                    b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
+                        .HasColumnType("integer");
 
-                    b.Property<Guid>("CourseId")
-                        .HasColumnType("uuid");
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("CourseId")
+                        .HasColumnType("integer");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
@@ -577,9 +689,11 @@ namespace Educate.Infrastructure.Migrations
 
             modelBuilder.Entity("Educate.Domain.Entities.TestResult", b =>
                 {
-                    b.Property<Guid>("Id")
+                    b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
                     b.Property<DateTime>("CompletedAt")
                         .HasColumnType("timestamp with time zone");
@@ -587,8 +701,8 @@ namespace Educate.Infrastructure.Migrations
                     b.Property<int>("Score")
                         .HasColumnType("integer");
 
-                    b.Property<Guid>("TestId")
-                        .HasColumnType("uuid");
+                    b.Property<int>("TestId")
+                        .HasColumnType("integer");
 
                     b.Property<string>("UserId")
                         .IsRequired()
@@ -606,12 +720,14 @@ namespace Educate.Infrastructure.Migrations
 
             modelBuilder.Entity("Educate.Domain.Entities.TestSession", b =>
                 {
-                    b.Property<Guid>("SessionId")
+                    b.Property<int>("SessionId")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
+                        .HasColumnType("integer");
 
-                    b.Property<Guid>("CourseId")
-                        .HasColumnType("uuid");
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("SessionId"));
+
+                    b.Property<int>("CourseId")
+                        .HasColumnType("integer");
 
                     b.Property<string>("CurrentAnswers")
                         .IsRequired()
@@ -629,8 +745,8 @@ namespace Educate.Infrastructure.Migrations
                     b.Property<bool>("IsCompleted")
                         .HasColumnType("boolean");
 
-                    b.Property<Guid>("LevelId")
-                        .HasColumnType("uuid");
+                    b.Property<int>("LevelId")
+                        .HasColumnType("integer");
 
                     b.Property<string>("Questions")
                         .IsRequired()
@@ -639,8 +755,8 @@ namespace Educate.Infrastructure.Migrations
                     b.Property<DateTime>("StartTime")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<Guid?>("SubjectId")
-                        .HasColumnType("uuid");
+                    b.Property<int?>("SubjectId")
+                        .HasColumnType("integer");
 
                     b.Property<string>("TestType")
                         .IsRequired()
@@ -745,9 +861,8 @@ namespace Educate.Infrastructure.Migrations
                         .HasMaxLength(50)
                         .HasColumnType("character varying(50)");
 
-                    b.Property<string>("SubscriptionStatus")
-                        .HasMaxLength(20)
-                        .HasColumnType("character varying(20)");
+                    b.Property<int?>("SubscriptionStatus")
+                        .HasColumnType("integer");
 
                     b.Property<bool>("TwoFactorEnabled")
                         .HasColumnType("boolean");
@@ -770,21 +885,23 @@ namespace Educate.Infrastructure.Migrations
 
             modelBuilder.Entity("Educate.Domain.Entities.UserCourse", b =>
                 {
-                    b.Property<Guid>("UserCourseId")
+                    b.Property<int>("UserCourseId")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
+                        .HasColumnType("integer");
 
-                    b.Property<Guid>("CourseId")
-                        .HasColumnType("uuid");
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("UserCourseId"));
+
+                    b.Property<int>("CourseId")
+                        .HasColumnType("integer");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<Guid>("LevelId")
-                        .HasColumnType("uuid");
+                    b.Property<int>("LevelId")
+                        .HasColumnType("integer");
 
-                    b.Property<Guid>("PaymentId")
-                        .HasColumnType("uuid");
+                    b.Property<int>("PaymentId")
+                        .HasColumnType("integer");
 
                     b.Property<int>("RenewalCount")
                         .HasColumnType("integer");
@@ -823,17 +940,19 @@ namespace Educate.Infrastructure.Migrations
 
             modelBuilder.Entity("Educate.Domain.Entities.UserProgress", b =>
                 {
-                    b.Property<Guid>("ProgressId")
+                    b.Property<int>("ProgressId")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("ProgressId"));
 
                     b.Property<string>("CompletionStatus")
                         .IsRequired()
                         .HasMaxLength(20)
                         .HasColumnType("character varying(20)");
 
-                    b.Property<Guid>("CourseId")
-                        .HasColumnType("uuid");
+                    b.Property<int>("CourseId")
+                        .HasColumnType("integer");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
@@ -841,14 +960,14 @@ namespace Educate.Infrastructure.Migrations
                     b.Property<DateTime>("LastAccessed")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<Guid>("LevelId")
-                        .HasColumnType("uuid");
+                    b.Property<int>("LevelId")
+                        .HasColumnType("integer");
 
                     b.Property<decimal?>("Score")
                         .HasColumnType("numeric");
 
-                    b.Property<Guid>("SubjectId")
-                        .HasColumnType("uuid");
+                    b.Property<int>("SubjectId")
+                        .HasColumnType("integer");
 
                     b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
@@ -873,9 +992,11 @@ namespace Educate.Infrastructure.Migrations
 
             modelBuilder.Entity("Educate.Domain.Entities.UserTestAttempt", b =>
                 {
-                    b.Property<Guid>("AttemptId")
+                    b.Property<int>("AttemptId")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("AttemptId"));
 
                     b.Property<string>("Answers")
                         .IsRequired()
@@ -890,20 +1011,20 @@ namespace Educate.Infrastructure.Migrations
                     b.Property<int>("CorrectAnswers")
                         .HasColumnType("integer");
 
-                    b.Property<Guid>("CourseId")
-                        .HasColumnType("uuid");
+                    b.Property<int>("CourseId")
+                        .HasColumnType("integer");
 
                     b.Property<bool>("IsCompleted")
                         .HasColumnType("boolean");
 
-                    b.Property<Guid>("LevelId")
-                        .HasColumnType("uuid");
+                    b.Property<int>("LevelId")
+                        .HasColumnType("integer");
 
                     b.Property<decimal>("Score")
                         .HasColumnType("numeric");
 
-                    b.Property<Guid?>("SubjectId")
-                        .HasColumnType("uuid");
+                    b.Property<int?>("SubjectId")
+                        .HasColumnType("integer");
 
                     b.Property<string>("TestType")
                         .IsRequired()
@@ -1065,6 +1186,17 @@ namespace Educate.Infrastructure.Migrations
                     b.HasKey("UserId", "LoginProvider", "Name");
 
                     b.ToTable("AspNetUserTokens", (string)null);
+                });
+
+            modelBuilder.Entity("Educate.Domain.Entities.BulkUploadLog", b =>
+                {
+                    b.HasOne("Educate.Domain.Entities.User", "Admin")
+                        .WithMany()
+                        .HasForeignKey("AdminId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Admin");
                 });
 
             modelBuilder.Entity("Educate.Domain.Entities.Level", b =>

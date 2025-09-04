@@ -1,5 +1,6 @@
 using Educate.Application.Interfaces;
 using Educate.Domain.Entities;
+using Educate.Domain.Enums;
 using Educate.Infrastructure.Database;
 using Microsoft.EntityFrameworkCore;
 using QuestPDF.Fluent;
@@ -20,13 +21,13 @@ public class ReceiptService : IReceiptService
         QuestPDF.Settings.License = LicenseType.Community;
     }
 
-    public async Task<string> GenerateReceiptAsync(Guid paymentId)
+    public async Task<string> GenerateReceiptAsync(int paymentId)
     {
         var payment = await _context
             .Payments.Include(p => p.User)
             .FirstOrDefaultAsync(p => p.PaymentId == paymentId);
 
-        if (payment == null || payment.Status != "Success")
+        if (payment == null || payment.Status != PaymentStatus.Success)
             throw new InvalidOperationException("Payment not found or not successful");
 
         var receiptNumber = $"RCP-{DateTime.UtcNow:yyyyMMdd}-{payment.Reference[^8..]}";
@@ -52,7 +53,7 @@ public class ReceiptService : IReceiptService
         return receipt.ReceiptId.ToString();
     }
 
-    public async Task<byte[]> GetReceiptPdfAsync(Guid receiptId)
+    public async Task<byte[]> GetReceiptPdfAsync(int receiptId)
     {
         var receipt = await _context.Receipts.FindAsync(receiptId);
         if (receipt == null)
@@ -62,7 +63,7 @@ public class ReceiptService : IReceiptService
         return await File.ReadAllBytesAsync(fullPath);
     }
 
-    public async Task SendReceiptEmailAsync(Guid paymentId)
+    public async Task SendReceiptEmailAsync(int paymentId)
     {
         var payment = await _context
             .Payments.Include(p => p.User)

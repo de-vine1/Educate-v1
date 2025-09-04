@@ -1,4 +1,5 @@
 using Educate.Application.Interfaces;
+using Educate.Domain.Enums;
 using Educate.Infrastructure.Database;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -25,7 +26,7 @@ public class AnalyticsService : IAnalyticsService
 
         var thisMonthRevenue = await _context
             .Payments.Where(p =>
-                p.Status == "Success" && p.CreatedAt >= DateTime.UtcNow.AddDays(-30)
+                p.Status == PaymentStatus.Success && p.CreatedAt >= DateTime.UtcNow.AddDays(-30)
             )
             .SumAsync(p => p.Amount);
 
@@ -61,7 +62,9 @@ public class AnalyticsService : IAnalyticsService
 
         var payments = await _context
             .Payments.Where(p =>
-                p.Status == "Success" && p.CreatedAt >= startDate && p.CreatedAt <= endDate
+                p.Status == PaymentStatus.Success
+                && p.CreatedAt >= startDate
+                && p.CreatedAt <= endDate
             )
             .Include(p => p.Course)
             .ToListAsync();
@@ -148,7 +151,7 @@ public class AnalyticsService : IAnalyticsService
                         .Payments.Where(p =>
                             p.CourseId == uc.CourseId
                             && p.LevelId == uc.LevelId
-                            && p.Status == "Success"
+                            && p.Status == PaymentStatus.Success
                         )
                         .Sum(p => p.Amount)
                 ),

@@ -2,6 +2,7 @@ using System.Text;
 using System.Text.Json;
 using Educate.Application.Interfaces;
 using Educate.Domain.Entities;
+using Educate.Domain.Enums;
 using Educate.Infrastructure.Database;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -30,7 +31,7 @@ public class BulkUploadService : IBulkUploadService
         var uploadLog = new BulkUploadLog
         {
             AdminId = adminId,
-            UploadType = "Courses",
+            UploadType = UploadType.Courses,
             FileName = fileName,
             TotalRows = 0,
             SuccessfulRows = 0,
@@ -38,7 +39,7 @@ public class BulkUploadService : IBulkUploadService
             ErrorLog = JsonSerializer.Serialize(
                 new[] { "Excel processing requires EPPlus NuGet package installation" }
             ),
-            Status = "Failed",
+            Status = UploadStatus.Failed,
             CompletedAt = DateTime.UtcNow,
         };
 
@@ -65,7 +66,7 @@ public class BulkUploadService : IBulkUploadService
         var uploadLog = new BulkUploadLog
         {
             AdminId = adminId,
-            UploadType = "Students",
+            UploadType = UploadType.Students,
             FileName = fileName,
             TotalRows = 0,
             SuccessfulRows = 0,
@@ -73,7 +74,7 @@ public class BulkUploadService : IBulkUploadService
             ErrorLog = JsonSerializer.Serialize(
                 new[] { "Excel processing requires EPPlus NuGet package installation" }
             ),
-            Status = "Failed",
+            Status = UploadStatus.Failed,
             CompletedAt = DateTime.UtcNow,
         };
 
@@ -100,7 +101,7 @@ public class BulkUploadService : IBulkUploadService
         var uploadLog = new BulkUploadLog
         {
             AdminId = adminId,
-            UploadType = "Questions",
+            UploadType = UploadType.Questions,
             FileName = fileName,
             TotalRows = 0,
             SuccessfulRows = 0,
@@ -108,7 +109,7 @@ public class BulkUploadService : IBulkUploadService
             ErrorLog = JsonSerializer.Serialize(
                 new[] { "Excel processing requires EPPlus NuGet package installation" }
             ),
-            Status = "Failed",
+            Status = UploadStatus.Failed,
             CompletedAt = DateTime.UtcNow,
         };
 

@@ -26,7 +26,7 @@ public class TestService : ITestService
 
     public async Task<object> StartPracticeTestAsync(
         string userId,
-        Guid subjectId,
+        int subjectId,
         int questionCount = 10
     )
     {
@@ -70,7 +70,7 @@ public class TestService : ITestService
         };
     }
 
-    public async Task<object> StartMockExamAsync(string userId, Guid courseId, Guid levelId)
+    public async Task<object> StartMockExamAsync(string userId, int courseId, int levelId)
     {
         var level = await _context
             .Levels.Include(l => l.Course)
@@ -117,7 +117,7 @@ public class TestService : ITestService
         };
     }
 
-    public async Task<object> GetTestSessionAsync(string userId, Guid sessionId)
+    public async Task<object> GetTestSessionAsync(string userId, int sessionId)
     {
         var session = await _context
             .TestSessions.Include(s => s.Course)
@@ -129,7 +129,7 @@ public class TestService : ITestService
             return new { Success = false, Message = "Session not found or expired" };
 
         var questionIds =
-            JsonSerializer.Deserialize<List<Guid>>(session.Questions) ?? new List<Guid>();
+            JsonSerializer.Deserialize<List<int>>(session.Questions) ?? new List<int>();
         var currentAnswers = string.IsNullOrEmpty(session.CurrentAnswers)
             ? new Dictionary<string, string>()
             : JsonSerializer.Deserialize<Dictionary<string, string>>(session.CurrentAnswers)
@@ -151,8 +151,8 @@ public class TestService : ITestService
 
     public async Task<bool> SubmitAnswerAsync(
         string userId,
-        Guid sessionId,
-        Guid questionId,
+        int sessionId,
+        int questionId,
         string answer
     )
     {
@@ -176,7 +176,7 @@ public class TestService : ITestService
         return true;
     }
 
-    public async Task<object> CompleteTestAsync(string userId, Guid sessionId)
+    public async Task<object> CompleteTestAsync(string userId, int sessionId)
     {
         var session = await _context
             .TestSessions.Include(s => s.Course)
@@ -188,7 +188,7 @@ public class TestService : ITestService
             return new { Success = false, Message = "Session not found or already completed" };
 
         var questionIds =
-            JsonSerializer.Deserialize<List<Guid>>(session.Questions) ?? new List<Guid>();
+            JsonSerializer.Deserialize<List<int>>(session.Questions) ?? new List<int>();
         var userAnswers = string.IsNullOrEmpty(session.CurrentAnswers)
             ? new Dictionary<string, string>()
             : JsonSerializer.Deserialize<Dictionary<string, string>>(session.CurrentAnswers)
@@ -250,7 +250,7 @@ public class TestService : ITestService
         };
     }
 
-    public async Task<object> GetTestResultsAsync(string userId, Guid attemptId)
+    public async Task<object> GetTestResultsAsync(string userId, int attemptId)
     {
         var attempt = await _context
             .UserTestAttempts.Include(a => a.Course)
@@ -264,7 +264,7 @@ public class TestService : ITestService
         var userAnswers =
             JsonSerializer.Deserialize<Dictionary<string, string>>(attempt.Answers)
             ?? new Dictionary<string, string>();
-        var questionIds = userAnswers.Keys.Select(Guid.Parse).ToList();
+        var questionIds = userAnswers.Keys.Select(int.Parse).ToList();
 
         var questions = await _context
             .QuestionBanks.Where(q => questionIds.Contains(q.QuestionId))

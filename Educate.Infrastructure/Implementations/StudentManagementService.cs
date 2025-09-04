@@ -1,5 +1,6 @@
 using Educate.Application.Interfaces;
 using Educate.Domain.Entities;
+using Educate.Domain.Enums;
 using Educate.Infrastructure.Database;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -13,8 +14,12 @@ public class StudentManagementService : IStudentManagementService
     private readonly IEmailService _emailService;
     private readonly ILogger<StudentManagementService> _logger;
 
-    public StudentManagementService(AppDbContext context, INotificationService notificationService, 
-        IEmailService emailService, ILogger<StudentManagementService> logger)
+    public StudentManagementService(
+        AppDbContext context,
+        INotificationService notificationService,
+        IEmailService emailService,
+        ILogger<StudentManagementService> logger
+    )
     {
         _context = context;
         _notificationService = notificationService;
@@ -22,13 +27,21 @@ public class StudentManagementService : IStudentManagementService
         _logger = logger;
     }
 
-    public async Task<IEnumerable<object>> GetAllStudentsAsync(string? searchTerm = null, string? courseFilter = null, string? statusFilter = null)
+    public async Task<IEnumerable<object>> GetAllStudentsAsync(
+        string? searchTerm = null,
+        string? courseFilter = null,
+        string? statusFilter = null
+    )
     {
         var query = _context.Users.AsQueryable();
 
         if (!string.IsNullOrEmpty(searchTerm))
         {
-            query = query.Where(u => u.FirstName.Contains(searchTerm) || u.LastName.Contains(searchTerm) || u.Email!.Contains(searchTerm));
+            query = query.Where(u =>
+                u.FirstName.Contains(searchTerm)
+                || u.LastName.Contains(searchTerm)
+                || u.Email!.Contains(searchTerm)
+            );
         }
 
         var students = await query
@@ -39,8 +52,15 @@ public class StudentManagementService : IStudentManagementService
                 u.LastName,
                 u.Email,
                 u.CreatedAt,
-                ActiveSubscriptions = _context.UserCourses
-                    .Where(uc => uc.UserId == u.Id && (uc.Status == "Active" || uc.Status == "Renewed" || uc.Status == "ExpiringSoon"))
+                ActiveSubscriptions = _context
+                    .UserCourses.Where(uc =>
+                        uc.UserId == u.Id
+                        && (
+                            uc.Status == "Active"
+                            || uc.Status == "Renewed"
+                            || uc.Status == "ExpiringSoon"
+                        )
+                    )
                     .Include(uc => uc.Course)
                     .Include(uc => uc.Level)
                     .Select(uc => new
@@ -48,19 +68,23 @@ public class StudentManagementService : IStudentManagementService
                         CourseName = uc.Course.Name,
                         LevelName = uc.Level.Name,
                         uc.Status,
-                        uc.SubscriptionEndDate
+                        uc.SubscriptionEndDate,
                     })
                     .ToList(),
-                TotalTestAttempts = _context.UserTestAttempts.Count(a => a.UserId == u.Id && a.IsCompleted),
-                AverageScore = _context.UserTestAttempts
-                    .Where(a => a.UserId == u.Id && a.IsCompleted)
-                    .Average(a => (double?)a.Score) ?? 0
+                TotalTestAttempts = _context.UserTestAttempts.Count(a =>
+                    a.UserId == u.Id && a.IsCompleted
+                ),
+                AverageScore = _context
+                    .UserTestAttempts.Where(a => a.UserId == u.Id && a.IsCompleted)
+                    .Average(a => (double?)a.Score) ?? 0,
             })
             .ToListAsync();
 
         if (!string.IsNullOrEmpty(courseFilter))
         {
-            students = students.Where(s => s.ActiveSubscriptions.Any(sub => sub.CourseName.Contains(courseFilter))).ToList();
+            students = students
+                .Where(s => s.ActiveSubscriptions.Any(sub => sub.CourseName.Contains(courseFilter)))
+                .ToList();
         }
 
         if (!string.IsNullOrEmpty(statusFilter))
@@ -69,7 +93,7 @@ public class StudentManagementService : IStudentManagementService
             {
                 "active" => students.Where(s => s.ActiveSubscriptions.Any()).ToList(),
                 "inactive" => students.Where(s => !s.ActiveSubscriptions.Any()).ToList(),
-                _ => students
+                _ => students,
             };
         }
 
@@ -82,8 +106,8 @@ public class StudentManagementService : IStudentManagementService
         if (user == null)
             return new { Success = false, Message = "Student not found" };
 
-        var subscriptions = await _context.UserCourses
-            .Include(uc => uc.Course)
+        var subscriptions = await _context
+            .UserCourses.Include(uc => uc.Course)
             .Include(uc => uc.Level)
             .Where(uc => uc.UserId == userId)
             .Select(uc => new
@@ -95,12 +119,12 @@ public class StudentManagementService : IStudentManagementService
                 uc.SubscriptionStartDate,
                 uc.SubscriptionEndDate,
                 uc.RenewalCount,
-                IsScholarship = false
+                IsScholarship = false,
             })
             .ToListAsync();
 
-        var testHistory = await _context.UserTestAttempts
-            .Include(a => a.Course)
+        var testHistory = await _context
+            .UserTestAttempts.Include(a => a.Course)
             .Include(a => a.Level)
             .Include(a => a.Subject)
             .Where(a => a.UserId == userId && a.IsCompleted)
@@ -113,13 +137,13 @@ public class StudentManagementService : IStudentManagementService
                 SubjectName = a.Subject != null ? a.Subject.Name : "Full Exam",
                 a.Score,
                 a.AttemptDate,
-                a.TimeTaken
+                a.TimeTaken,
             })
             .OrderByDescending(a => a.AttemptDate)
             .ToListAsync();
 
-        var paymentHistory = await _context.Payments
-            .Include(p => p.Course)
+        var paymentHistory = await _context
+            .Payments.Include(p => p.Course)
             .Include(p => p.Level)
             .Where(p => p.UserId == userId)
             .Select(p => new
@@ -130,7 +154,7 @@ public class StudentManagementService : IStudentManagementService
                 p.Status,
                 CourseName = p.Course != null ? p.Course.Name : "N/A",
                 LevelName = p.Level != null ? p.Level.Name : "N/A",
-                p.CreatedAt
+                p.CreatedAt,
             })
             .OrderByDescending(p => p.CreatedAt)
             .ToListAsync();
@@ -144,7 +168,7 @@ public class StudentManagementService : IStudentManagementService
                 user.FirstName,
                 user.LastName,
                 user.Email,
-                user.CreatedAt
+                user.CreatedAt,
             },
             Subscriptions = subscriptions,
             TestHistory = testHistory,
@@ -154,15 +178,24 @@ public class StudentManagementService : IStudentManagementService
                 TotalTestAttempts = testHistory.Count,
                 AverageScore = testHistory.Any() ? testHistory.Average(t => t.Score) : 0,
                 BestScore = testHistory.Any() ? testHistory.Max(t => t.Score) : 0,
-                TotalPayments = paymentHistory.Where(p => p.Status == "Success").Sum(p => p.Amount)
-            }
+                TotalPayments = paymentHistory
+                    .Where(p => p.Status == PaymentStatus.Success)
+                    .Sum(p => p.Amount),
+            },
         };
     }
 
-    public async Task<bool> ExtendSubscriptionAsync(string userId, Guid courseId, Guid levelId, int months, string adminId)
+    public async Task<bool> ExtendSubscriptionAsync(
+        string userId,
+        int courseId,
+        int levelId,
+        int months,
+        string adminId
+    )
     {
-        var subscription = await _context.UserCourses
-            .FirstOrDefaultAsync(uc => uc.UserId == userId && uc.CourseId == courseId && uc.LevelId == levelId);
+        var subscription = await _context.UserCourses.FirstOrDefaultAsync(uc =>
+            uc.UserId == userId && uc.CourseId == courseId && uc.LevelId == levelId
+        );
 
         if (subscription == null)
             return false;
@@ -180,7 +213,7 @@ public class StudentManagementService : IStudentManagementService
             LevelId = levelId,
             Action = "Extended",
             PreviousEndDate = previousEndDate,
-            NewEndDate = subscription.SubscriptionEndDate
+            NewEndDate = subscription.SubscriptionEndDate,
         };
         _context.SubscriptionHistories.Add(history);
 
@@ -190,21 +223,34 @@ public class StudentManagementService : IStudentManagementService
         {
             try
             {
-                await _notificationService.SendSubscriptionExtensionNotificationAsync(userId, months);
+                await _notificationService.SendSubscriptionExtensionNotificationAsync(
+                    userId,
+                    months
+                );
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Failed to send extension notification to user {UserId}", userId);
+                _logger.LogError(
+                    ex,
+                    "Failed to send extension notification to user {UserId}",
+                    userId
+                );
             }
         });
 
         return true;
     }
 
-    public async Task<bool> ToggleScholarshipAsync(string userId, Guid courseId, Guid levelId, string adminId)
+    public async Task<bool> ToggleScholarshipAsync(
+        string userId,
+        int courseId,
+        int levelId,
+        string adminId
+    )
     {
-        var subscription = await _context.UserCourses
-            .FirstOrDefaultAsync(uc => uc.UserId == userId && uc.CourseId == courseId && uc.LevelId == levelId);
+        var subscription = await _context.UserCourses.FirstOrDefaultAsync(uc =>
+            uc.UserId == userId && uc.CourseId == courseId && uc.LevelId == levelId
+        );
 
         if (subscription == null)
             return false;
@@ -217,7 +263,7 @@ public class StudentManagementService : IStudentManagementService
             UserId = userId,
             CourseId = courseId,
             LevelId = levelId,
-            Action = "Scholarship Toggled"
+            Action = "Scholarship Toggled",
         };
         _context.SubscriptionHistories.Add(history);
 
@@ -225,10 +271,14 @@ public class StudentManagementService : IStudentManagementService
         return true;
     }
 
-    public async Task<bool> ResetTestAttemptsAsync(string userId, Guid? courseId = null, string adminId = "")
+    public async Task<bool> ResetTestAttemptsAsync(
+        string userId,
+        int? courseId = null,
+        string adminId = ""
+    )
     {
         var query = _context.UserTestAttempts.Where(a => a.UserId == userId);
-        
+
         if (courseId.HasValue)
         {
             query = query.Where(a => a.CourseId == courseId);
@@ -237,10 +287,10 @@ public class StudentManagementService : IStudentManagementService
         var attempts = await query.ToListAsync();
         _context.UserTestAttempts.RemoveRange(attempts);
 
-        var sessions = await _context.TestSessions
-            .Where(s => s.UserId == userId && s.IsActive)
+        var sessions = await _context
+            .TestSessions.Where(s => s.UserId == userId && s.IsActive)
             .ToListAsync();
-        
+
         foreach (var session in sessions)
         {
             session.IsActive = false;
@@ -249,14 +299,24 @@ public class StudentManagementService : IStudentManagementService
 
         await _context.SaveChangesAsync();
 
-        _logger.LogInformation("Reset {Count} test attempts for user {UserId} by admin {AdminId}", 
-            attempts.Count, userId, adminId);
+        _logger.LogInformation(
+            "Reset {Count} test attempts for user {UserId} by admin {AdminId}",
+            attempts.Count,
+            userId,
+            adminId
+        );
 
         return true;
     }
 
-    public async Task<object> SendAnnouncementAsync(string title, string message, string? targetCourse = null, 
-        string? targetLevel = null, string? targetUserId = null, string adminId = "")
+    public async Task<object> SendAnnouncementAsync(
+        string title,
+        string message,
+        string? targetCourse = null,
+        string? targetLevel = null,
+        string? targetUserId = null,
+        string adminId = ""
+    )
     {
         var recipients = new List<string>();
 
@@ -279,7 +339,9 @@ public class StudentManagementService : IStudentManagementService
             }
 
             recipients = await query
-                .Where(uc => uc.Status == "Active" || uc.Status == "Renewed" || uc.Status == "ExpiringSoon")
+                .Where(uc =>
+                    uc.Status == "Active" || uc.Status == "Renewed" || uc.Status == "ExpiringSoon"
+                )
                 .Select(uc => uc.UserId)
                 .Distinct()
                 .ToListAsync();
@@ -295,7 +357,7 @@ public class StudentManagementService : IStudentManagementService
                     UserId = userId,
                     Title = title,
                     Message = message,
-                    Type = "Announcement"
+                    Type = "Announcement",
                 };
                 _context.Notifications.Add(notification);
 
@@ -306,11 +368,20 @@ public class StudentManagementService : IStudentManagementService
                     {
                         try
                         {
-                            await _emailService.SendAnnouncementEmailAsync(user.Email, user.FirstName, title, message);
+                            await _emailService.SendAnnouncementEmailAsync(
+                                user.Email,
+                                user.FirstName,
+                                title,
+                                message
+                            );
                         }
                         catch (Exception ex)
                         {
-                            _logger.LogError(ex, "Failed to send announcement email to {Email}", user.Email);
+                            _logger.LogError(
+                                ex,
+                                "Failed to send announcement email to {Email}",
+                                user.Email
+                            );
                         }
                     });
                 }
@@ -329,7 +400,7 @@ public class StudentManagementService : IStudentManagementService
         {
             Success = true,
             RecipientsCount = sentCount,
-            Message = $"Announcement sent to {sentCount} users"
+            Message = $"Announcement sent to {sentCount} users",
         };
     }
 }

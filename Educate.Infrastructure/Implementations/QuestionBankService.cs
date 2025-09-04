@@ -18,14 +18,13 @@ public class QuestionBankService : IQuestionBankService
     }
 
     public async Task<bool> AddQuestionAsync(
-        Guid courseId,
-        Guid levelId,
-        Guid subjectId,
+        int courseId,
+        int levelId,
+        int subjectId,
         string questionText,
         string options,
         string correctAnswer,
         string explanation,
-        string difficulty,
         string createdBy
     )
     {
@@ -38,7 +37,7 @@ public class QuestionBankService : IQuestionBankService
             Options = options,
             CorrectAnswer = correctAnswer,
             Explanation = explanation,
-            Difficulty = difficulty,
+
             CreatedBy = createdBy,
         };
 
@@ -48,12 +47,11 @@ public class QuestionBankService : IQuestionBankService
     }
 
     public async Task<bool> UpdateQuestionAsync(
-        Guid questionId,
+        int questionId,
         string questionText,
         string options,
         string correctAnswer,
-        string explanation,
-        string difficulty
+        string explanation
     )
     {
         var question = await _context.QuestionBanks.FindAsync(questionId);
@@ -64,14 +62,14 @@ public class QuestionBankService : IQuestionBankService
         question.Options = options;
         question.CorrectAnswer = correctAnswer;
         question.Explanation = explanation;
-        question.Difficulty = difficulty;
+
         question.UpdatedAt = DateTime.UtcNow;
 
         await _context.SaveChangesAsync();
         return true;
     }
 
-    public async Task<bool> ToggleQuestionStatusAsync(Guid questionId)
+    public async Task<bool> ToggleQuestionStatusAsync(int questionId)
     {
         var question = await _context.QuestionBanks.FindAsync(questionId);
         if (question == null)
@@ -85,10 +83,9 @@ public class QuestionBankService : IQuestionBankService
     }
 
     public async Task<IEnumerable<object>> GetQuestionsAsync(
-        Guid? courseId = null,
-        Guid? levelId = null,
-        Guid? subjectId = null,
-        string? difficulty = null
+        int? courseId = null,
+        int? levelId = null,
+        int? subjectId = null
     )
     {
         var query = _context
@@ -106,9 +103,6 @@ public class QuestionBankService : IQuestionBankService
         if (subjectId.HasValue)
             query = query.Where(q => q.SubjectId == subjectId);
 
-        if (!string.IsNullOrEmpty(difficulty))
-            query = query.Where(q => q.Difficulty == difficulty);
-
         return await query
             .Select(q => new
             {
@@ -117,7 +111,6 @@ public class QuestionBankService : IQuestionBankService
                 q.Options,
                 q.CorrectAnswer,
                 q.Explanation,
-                q.Difficulty,
                 q.IsActive,
                 CourseName = q.Course.Name,
                 LevelName = q.Level.Name,
@@ -129,7 +122,7 @@ public class QuestionBankService : IQuestionBankService
             .ToListAsync();
     }
 
-    public async Task<IEnumerable<object>> GetRandomQuestionsAsync(Guid subjectId, int count)
+    public async Task<IEnumerable<object>> GetRandomQuestionsAsync(int subjectId, int count)
     {
         var questions = await _context
             .QuestionBanks.Where(q => q.SubjectId == subjectId && q.IsActive)
@@ -140,7 +133,6 @@ public class QuestionBankService : IQuestionBankService
                 q.QuestionId,
                 q.QuestionText,
                 q.Options,
-                q.Difficulty,
             })
             .ToListAsync();
 
@@ -148,8 +140,8 @@ public class QuestionBankService : IQuestionBankService
     }
 
     public async Task<IEnumerable<object>> GetMockExamQuestionsAsync(
-        Guid courseId,
-        Guid levelId,
+        int courseId,
+        int levelId,
         int count
     )
     {
@@ -162,7 +154,6 @@ public class QuestionBankService : IQuestionBankService
                 q.QuestionId,
                 q.QuestionText,
                 q.Options,
-                q.Difficulty,
                 SubjectName = q.Subject.Name,
             })
             .ToListAsync();

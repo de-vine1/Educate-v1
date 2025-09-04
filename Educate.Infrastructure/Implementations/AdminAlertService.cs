@@ -1,5 +1,6 @@
 using Educate.Application.Interfaces;
 using Educate.Domain.Entities;
+using Educate.Domain.Enums;
 using Educate.Infrastructure.Database;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -115,7 +116,7 @@ public class AdminAlertService : IAdminAlertService
     {
         var recentFailures = await _context
             .Payments.Where(p =>
-                p.Status == "Failed" && p.CreatedAt >= DateTime.UtcNow.AddHours(-1)
+                p.Status == PaymentStatus.Failed && p.CreatedAt >= DateTime.UtcNow.AddHours(-1)
             )
             .CountAsync();
 
