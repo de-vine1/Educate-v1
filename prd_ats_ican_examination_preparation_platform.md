@@ -169,13 +169,13 @@ Allow users to enroll into specific exam levels via subscriptions.
 
 ---
 
-## Phase 3 – Payments Integration (Monnify & Paystack)
+## Phase 3 – Payments Integration (Paystack)
 
 ### Objective
 Enable secure and flexible payments for subscriptions.
 
 ### Implementation Steps
-1. Configure Monnify and Paystack as payment providers
+1. Configure Paystack as payment providers
 2. Generate unique transactions per enrollment
 3. Handle callbacks and payment verification
 4. Prevent duplicate or replayed transactions

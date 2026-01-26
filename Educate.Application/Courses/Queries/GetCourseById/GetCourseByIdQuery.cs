@@ -3,4 +3,4 @@ using MediatR;
 
 namespace Educate.Application.Courses.Queries.GetCourseById;
 
-public record GetCourseByIdQuery(int Id) : IRequest<Course?>;
+public record GetCourseByIdQuery(Guid Id) : IRequest<Course?>;

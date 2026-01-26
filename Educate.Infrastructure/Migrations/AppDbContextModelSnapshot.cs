@@ -24,11 +24,9 @@ namespace Educate.Infrastructure.Migrations
 
             modelBuilder.Entity("Educate.Domain.Entities.AuditLog", b =>
                 {
-                    b.Property<int>("Id")
+                    b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+                        .HasColumnType("uuid");
 
                     b.Property<string>("Action")
                         .IsRequired()
@@ -60,14 +58,13 @@ namespace Educate.Infrastructure.Migrations
 
             modelBuilder.Entity("Educate.Domain.Entities.Course", b =>
                 {
-                    b.Property<int>("Id")
+                    b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
+                        .HasColumnType("uuid");
 
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
-
-                    b.Property<decimal>("AnnualPrice")
-                        .HasColumnType("numeric");
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasColumnType("text");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
@@ -86,27 +83,226 @@ namespace Educate.Infrastructure.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("Courses");
+
+                    b.HasData(
+                        new
+                        {
+                            Id = new Guid("d7d2d3a0-1b2c-4d3e-8f5a-2b3c4d5e6f7a"),
+                            Code = "ATS",
+                            CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Description = "Association of Accountancy Bodies in West Africa - Accounting Technicians Scheme",
+                            IsActive = true,
+                            Name = "ATS"
+                        },
+                        new
+                        {
+                            Id = new Guid("e8e3d4b1-2c3d-5e4f-9a6b-3c4d5e6f7a8b"),
+                            Code = "ICAN",
+                            CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Description = "Institute of Chartered Accountants of Nigeria",
+                            IsActive = true,
+                            Name = "ICAN"
+                        });
+                });
+
+            modelBuilder.Entity("Educate.Domain.Entities.Exam", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("Duration")
+                        .HasColumnType("integer");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean");
+
+                    b.Property<int>("PassingScore")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid>("SubjectId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<int>("TotalPoints")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("SubjectId");
+
+                    b.ToTable("Exams");
+                });
+
+            modelBuilder.Entity("Educate.Domain.Entities.ExamQuestion", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("ExamId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("OrderNumber")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid>("QuestionId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ExamId");
+
+                    b.HasIndex("QuestionId");
+
+                    b.ToTable("ExamQuestions");
+                });
+
+            modelBuilder.Entity("Educate.Domain.Entities.Level", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("CourseId")
+                        .HasColumnType("uuid");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<int>("Order")
+                        .HasColumnType("integer");
+
+                    b.Property<decimal>("Price")
+                        .HasColumnType("numeric");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CourseId");
+
+                    b.ToTable("Levels");
+
+                    b.HasData(
+                        new
+                        {
+                            Id = new Guid("a1a1a1a1-b2b2-c3c3-d4d4-e5e5e5e5e5e5"),
+                            CourseId = new Guid("d7d2d3a0-1b2c-4d3e-8f5a-2b3c4d5e6f7a"),
+                            IsActive = true,
+                            Name = "ATS 1",
+                            Order = 1,
+                            Price = 15000m
+                        },
+                        new
+                        {
+                            Id = new Guid("a2a2a2a2-b3b3-c4c4-d5d5-e6e6e6e6e6e6"),
+                            CourseId = new Guid("d7d2d3a0-1b2c-4d3e-8f5a-2b3c4d5e6f7a"),
+                            IsActive = true,
+                            Name = "ATS 2",
+                            Order = 2,
+                            Price = 20000m
+                        },
+                        new
+                        {
+                            Id = new Guid("a3a3a3a3-b4b4-c5c5-d6d6-e7e7e7e7e7e7"),
+                            CourseId = new Guid("d7d2d3a0-1b2c-4d3e-8f5a-2b3c4d5e6f7a"),
+                            IsActive = true,
+                            Name = "ATS 3",
+                            Order = 3,
+                            Price = 25000m
+                        },
+                        new
+                        {
+                            Id = new Guid("f1f1f1f1-a2a2-b3b3-c4c4-d5d5d5d5d5d5"),
+                            CourseId = new Guid("e8e3d4b1-2c3d-5e4f-9a6b-3c4d5e6f7a8b"),
+                            IsActive = true,
+                            Name = "Foundation",
+                            Order = 1,
+                            Price = 40000m
+                        },
+                        new
+                        {
+                            Id = new Guid("b2b2b2b2-b3b3-c4c4-d5d5-e6e6e6e6e6e6"),
+                            CourseId = new Guid("e8e3d4b1-2c3d-5e4f-9a6b-3c4d5e6f7a8b"),
+                            IsActive = true,
+                            Name = "Skills",
+                            Order = 2,
+                            Price = 55000m
+                        },
+                        new
+                        {
+                            Id = new Guid("c3c3c3c3-c4c4-d5d5-e6e6-f7f7f7f7f7f7"),
+                            CourseId = new Guid("e8e3d4b1-2c3d-5e4f-9a6b-3c4d5e6f7a8b"),
+                            IsActive = true,
+                            Name = "Professional",
+                            Order = 3,
+                            Price = 70000m
+                        });
+                });
+
+            modelBuilder.Entity("Educate.Domain.Entities.LoginAttempt", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("FailureReason")
+                        .HasColumnType("text");
+
+                    b.Property<string>("IpAddress")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<bool>("IsSuccessful")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("Location")
+                        .HasColumnType("text");
+
+                    b.Property<DateTime>("Timestamp")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("UserAgent")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("UserId")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("LoginAttempts");
                 });
 
             modelBuilder.Entity("Educate.Domain.Entities.Payment", b =>
                 {
-                    b.Property<int>("Id")
+                    b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+                        .HasColumnType("uuid");
 
                     b.Property<decimal>("Amount")
                         .HasColumnType("numeric");
-
-                    b.Property<int>("CourseId")
-                        .HasColumnType("integer");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("EncryptedCardToken")
                         .HasColumnType("text");
+
+                    b.Property<Guid>("LevelId")
+                        .HasColumnType("uuid");
 
                     b.Property<string>("PaymentMethod")
                         .IsRequired()
@@ -126,7 +322,7 @@ namespace Educate.Infrastructure.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("CourseId");
+                    b.HasIndex("LevelId");
 
                     b.HasIndex("UserId");
 
@@ -135,18 +331,16 @@ namespace Educate.Infrastructure.Migrations
 
             modelBuilder.Entity("Educate.Domain.Entities.PracticeMaterial", b =>
                 {
-                    b.Property<int>("Id")
+                    b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+                        .HasColumnType("uuid");
 
                     b.Property<string>("Content")
                         .IsRequired()
                         .HasColumnType("text");
 
-                    b.Property<int>("CourseId")
-                        .HasColumnType("integer");
+                    b.Property<Guid>("CourseId")
+                        .HasColumnType("uuid");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
@@ -165,22 +359,70 @@ namespace Educate.Infrastructure.Migrations
                     b.ToTable("PracticeMaterials");
                 });
 
-            modelBuilder.Entity("Educate.Domain.Entities.RefreshToken", b =>
+            modelBuilder.Entity("Educate.Domain.Entities.Question", b =>
                 {
-                    b.Property<int>("Id")
+                    b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
+                        .HasColumnType("uuid");
 
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+                    b.Property<string>("CorrectAnswer")
+                        .HasColumnType("text");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<int>("DifficultyLevel")
+                        .HasColumnType("integer");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("Options")
+                        .HasColumnType("text");
+
+                    b.Property<int>("Points")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("QuestionText")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<int>("QuestionType")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid>("SubjectId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("SubjectId");
+
+                    b.ToTable("Questions");
+                });
+
+            modelBuilder.Entity("Educate.Domain.Entities.RefreshToken", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("DeviceInfo")
+                        .HasColumnType("text");
+
                     b.Property<DateTime>("ExpiresAt")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<string>("IpAddress")
+                        .HasColumnType("text");
+
                     b.Property<bool>("IsRevoked")
                         .HasColumnType("boolean");
+
+                    b.Property<DateTime>("LastActivity")
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("Token")
                         .IsRequired()
@@ -195,19 +437,285 @@ namespace Educate.Infrastructure.Migrations
                     b.ToTable("RefreshTokens");
                 });
 
-            modelBuilder.Entity("Educate.Domain.Entities.Subscription", b =>
+            modelBuilder.Entity("Educate.Domain.Entities.StudentAnswer", b =>
                 {
-                    b.Property<int>("Id")
+                    b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("AnswerText")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTime>("AnsweredAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool?>("IsCorrect")
+                        .HasColumnType("boolean");
+
+                    b.Property<int>("PointsEarned")
                         .HasColumnType("integer");
 
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+                    b.Property<Guid>("QuestionId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("StudentExamId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("QuestionId");
+
+                    b.HasIndex("StudentExamId");
+
+                    b.ToTable("StudentAnswers");
+                });
+
+            modelBuilder.Entity("Educate.Domain.Entities.StudentExam", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("EndTime")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("ExamId")
+                        .HasColumnType("uuid");
+
+                    b.Property<bool?>("IsPassed")
+                        .HasColumnType("boolean");
+
+                    b.Property<DateTime>("StartTime")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime?>("SubmittedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int?>("TotalScore")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("UserId")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ExamId");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("StudentExams");
+                });
+
+            modelBuilder.Entity("Educate.Domain.Entities.Subject", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean");
+
+                    b.Property<Guid>("LevelId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("LevelId");
+
+                    b.ToTable("Subjects");
+
+                    b.HasData(
+                        new
+                        {
+                            Id = new Guid("11111111-1111-1111-1111-111111111101"),
+                            Code = "BAPS",
+                            IsActive = true,
+                            LevelId = new Guid("a1a1a1a1-b2b2-c3c3-d4d4-e5e5e5e5e5e5"),
+                            Name = "Basic Accounting Processes & Systems"
+                        },
+                        new
+                        {
+                            Id = new Guid("11111111-1111-1111-1111-111111111102"),
+                            Code = "ECO",
+                            IsActive = true,
+                            LevelId = new Guid("a1a1a1a1-b2b2-c3c3-d4d4-e5e5e5e5e5e5"),
+                            Name = "Economics"
+                        },
+                        new
+                        {
+                            Id = new Guid("11111111-1111-1111-1111-111111111103"),
+                            Code = "LAW",
+                            IsActive = true,
+                            LevelId = new Guid("a1a1a1a1-b2b2-c3c3-d4d4-e5e5e5e5e5e5"),
+                            Name = "Business Law"
+                        },
+                        new
+                        {
+                            Id = new Guid("11111111-1111-1111-1111-111111111104"),
+                            Code = "COM",
+                            IsActive = true,
+                            LevelId = new Guid("a1a1a1a1-b2b2-c3c3-d4d4-e5e5e5e5e5e5"),
+                            Name = "Communication Skills"
+                        },
+                        new
+                        {
+                            Id = new Guid("22222222-2222-2222-2222-222222222201"),
+                            Code = "AUD",
+                            IsActive = true,
+                            LevelId = new Guid("a2a2a2a2-b3b3-c4c4-d5d5-e6e6e6e6e6e6"),
+                            Name = "Principles of Auditing"
+                        },
+                        new
+                        {
+                            Id = new Guid("22222222-2222-2222-2222-222222222202"),
+                            Code = "PSA",
+                            IsActive = true,
+                            LevelId = new Guid("a2a2a2a2-b3b3-c4c4-d5d5-e6e6e6e6e6e6"),
+                            Name = "Public Sector Accounting"
+                        },
+                        new
+                        {
+                            Id = new Guid("22222222-2222-2222-2222-222222222203"),
+                            Code = "QTA",
+                            IsActive = true,
+                            LevelId = new Guid("a2a2a2a2-b3b3-c4c4-d5d5-e6e6e6e6e6e6"),
+                            Name = "Quantitative Analysis"
+                        },
+                        new
+                        {
+                            Id = new Guid("22222222-2222-2222-2222-222222222204"),
+                            Code = "IT",
+                            IsActive = true,
+                            LevelId = new Guid("a2a2a2a2-b3b3-c4c4-d5d5-e6e6e6e6e6e6"),
+                            Name = "Information Technology"
+                        },
+                        new
+                        {
+                            Id = new Guid("33333333-3333-3333-3333-333333333301"),
+                            Code = "TAX",
+                            IsActive = true,
+                            LevelId = new Guid("a3a3a3a3-b4b4-c5c5-d6d6-e7e7e7e7e7e7"),
+                            Name = "Principles of Taxation"
+                        },
+                        new
+                        {
+                            Id = new Guid("33333333-3333-3333-3333-333333333302"),
+                            Code = "COST",
+                            IsActive = true,
+                            LevelId = new Guid("a3a3a3a3-b4b4-c5c5-d6d6-e7e7e7e7e7e7"),
+                            Name = "Cost Accounting"
+                        },
+                        new
+                        {
+                            Id = new Guid("33333333-3333-3333-3333-333333333303"),
+                            Code = "PTCR",
+                            IsActive = true,
+                            LevelId = new Guid("a3a3a3a3-b4b4-c5c5-d6d6-e7e7e7e7e7e7"),
+                            Name = "Preparing Tax Computations & Returns"
+                        },
+                        new
+                        {
+                            Id = new Guid("33333333-3333-3333-3333-333333333304"),
+                            Code = "MGT",
+                            IsActive = true,
+                            LevelId = new Guid("a3a3a3a3-b4b4-c5c5-d6d6-e7e7e7e7e7e7"),
+                            Name = "Management"
+                        },
+                        new
+                        {
+                            Id = new Guid("44444444-4444-4444-4444-444444444401"),
+                            Code = "FA",
+                            IsActive = true,
+                            LevelId = new Guid("f1f1f1f1-a2a2-b3b3-c4c4-d5d5d5d5d5d5"),
+                            Name = "Financial Accounting"
+                        },
+                        new
+                        {
+                            Id = new Guid("44444444-4444-4444-4444-444444444402"),
+                            Code = "BL",
+                            IsActive = true,
+                            LevelId = new Guid("f1f1f1f1-a2a2-b3b3-c4c4-d5d5d5d5d5d5"),
+                            Name = "Business Law"
+                        },
+                        new
+                        {
+                            Id = new Guid("44444444-4444-4444-4444-444444444403"),
+                            Code = "MI",
+                            IsActive = true,
+                            LevelId = new Guid("f1f1f1f1-a2a2-b3b3-c4c4-d5d5d5d5d5d5"),
+                            Name = "Management Information"
+                        },
+                        new
+                        {
+                            Id = new Guid("55555555-5555-5555-5555-555555555501"),
+                            Code = "FR",
+                            IsActive = true,
+                            LevelId = new Guid("b2b2b2b2-b3b3-c4c4-d5d5-e6e6e6e6e6e6"),
+                            Name = "Financial Reporting"
+                        },
+                        new
+                        {
+                            Id = new Guid("55555555-5555-5555-5555-555555555502"),
+                            Code = "AA",
+                            IsActive = true,
+                            LevelId = new Guid("b2b2b2b2-b3b3-c4c4-d5d5-e6e6e6e6e6e6"),
+                            Name = "Audit & Assurance"
+                        },
+                        new
+                        {
+                            Id = new Guid("55555555-5555-5555-5555-555555555503"),
+                            Code = "TX",
+                            IsActive = true,
+                            LevelId = new Guid("b2b2b2b2-b3b3-c4c4-d5d5-e6e6e6e6e6e6"),
+                            Name = "Taxation"
+                        },
+                        new
+                        {
+                            Id = new Guid("66666666-6666-6666-6666-666666666601"),
+                            Code = "CR",
+                            IsActive = true,
+                            LevelId = new Guid("c3c3c3c3-c4c4-d5d5-e6e6-f7f7f7f7f7f7"),
+                            Name = "Corporate Reporting"
+                        },
+                        new
+                        {
+                            Id = new Guid("66666666-6666-6666-6666-666666666602"),
+                            Code = "AAA",
+                            IsActive = true,
+                            LevelId = new Guid("c3c3c3c3-c4c4-d5d5-e6e6-f7f7f7f7f7f7"),
+                            Name = "Advanced Audit & Assurance"
+                        },
+                        new
+                        {
+                            Id = new Guid("66666666-6666-6666-6666-666666666603"),
+                            Code = "SFM",
+                            IsActive = true,
+                            LevelId = new Guid("c3c3c3c3-c4c4-d5d5-e6e6-f7f7f7f7f7f7"),
+                            Name = "Strategic Financial Management"
+                        });
+                });
+
+            modelBuilder.Entity("Educate.Domain.Entities.Subscription", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
 
                     b.Property<decimal>("AmountPaid")
                         .HasColumnType("numeric");
-
-                    b.Property<int>("CourseId")
-                        .HasColumnType("integer");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
@@ -218,6 +726,9 @@ namespace Educate.Infrastructure.Migrations
                     b.Property<bool>("IsActive")
                         .HasColumnType("boolean");
 
+                    b.Property<Guid>("LevelId")
+                        .HasColumnType("uuid");
+
                     b.Property<DateTime>("StartDate")
                         .HasColumnType("timestamp with time zone");
 
@@ -227,7 +738,7 @@ namespace Educate.Infrastructure.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("CourseId");
+                    b.HasIndex("LevelId");
 
                     b.HasIndex("UserId");
 
@@ -236,14 +747,12 @@ namespace Educate.Infrastructure.Migrations
 
             modelBuilder.Entity("Educate.Domain.Entities.Test", b =>
                 {
-                    b.Property<int>("Id")
+                    b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
+                        .HasColumnType("uuid");
 
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
-
-                    b.Property<int>("CourseId")
-                        .HasColumnType("integer");
+                    b.Property<Guid>("CourseId")
+                        .HasColumnType("uuid");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
@@ -264,11 +773,9 @@ namespace Educate.Infrastructure.Migrations
 
             modelBuilder.Entity("Educate.Domain.Entities.TestResult", b =>
                 {
-                    b.Property<int>("Id")
+                    b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+                        .HasColumnType("uuid");
 
                     b.Property<DateTime>("CompletedAt")
                         .HasColumnType("timestamp with time zone");
@@ -276,8 +783,8 @@ namespace Educate.Infrastructure.Migrations
                     b.Property<int>("Score")
                         .HasColumnType("integer");
 
-                    b.Property<int>("TestId")
-                        .HasColumnType("integer");
+                    b.Property<Guid>("TestId")
+                        .HasColumnType("uuid");
 
                     b.Property<string>("UserId")
                         .IsRequired()
@@ -290,6 +797,36 @@ namespace Educate.Infrastructure.Migrations
                     b.HasIndex("UserId");
 
                     b.ToTable("TestResults");
+                });
+
+            modelBuilder.Entity("Educate.Domain.Entities.TwoFactorBackupCode", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("CodeHash")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("IsUsed")
+                        .HasColumnType("boolean");
+
+                    b.Property<DateTime?>("UsedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("UserId")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("TwoFactorBackupCodes");
                 });
 
             modelBuilder.Entity("Educate.Domain.Entities.User", b =>
@@ -305,6 +842,9 @@ namespace Educate.Infrastructure.Migrations
                         .HasColumnType("text");
 
                     b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime?>("DeletedAt")
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("Email")
@@ -323,6 +863,12 @@ namespace Educate.Infrastructure.Migrations
                     b.Property<string>("FirstName")
                         .IsRequired()
                         .HasColumnType("text");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("IsTwoFactorEnabled")
+                        .HasColumnType("boolean");
 
                     b.Property<DateTime?>("LastLoginAt")
                         .HasColumnType("timestamp with time zone");
@@ -372,6 +918,9 @@ namespace Educate.Infrastructure.Migrations
                     b.Property<bool>("TwoFactorEnabled")
                         .HasColumnType("boolean");
 
+                    b.Property<string>("TwoFactorSecretKey")
+                        .HasColumnType("text");
+
                     b.Property<string>("UserName")
                         .HasMaxLength(256)
                         .HasColumnType("character varying(256)");
@@ -386,6 +935,39 @@ namespace Educate.Infrastructure.Migrations
                         .HasDatabaseName("UserNameIndex");
 
                     b.ToTable("AspNetUsers", (string)null);
+                });
+
+            modelBuilder.Entity("Educate.Domain.Entities.UserSettings", b =>
+                {
+                    b.Property<string>("UserId")
+                        .HasColumnType("text");
+
+                    b.Property<bool>("ExamReminders")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("Language")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<bool>("MarketingEmails")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("PublicProfile")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("ShowExamResults")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("SystemNotifications")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("Timezone")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.HasKey("UserId");
+
+                    b.ToTable("UserSettings");
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRole", b =>
@@ -520,11 +1102,63 @@ namespace Educate.Infrastructure.Migrations
                     b.ToTable("AspNetUserTokens", (string)null);
                 });
 
-            modelBuilder.Entity("Educate.Domain.Entities.Payment", b =>
+            modelBuilder.Entity("Educate.Domain.Entities.Exam", b =>
+                {
+                    b.HasOne("Educate.Domain.Entities.Subject", "Subject")
+                        .WithMany()
+                        .HasForeignKey("SubjectId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Subject");
+                });
+
+            modelBuilder.Entity("Educate.Domain.Entities.ExamQuestion", b =>
+                {
+                    b.HasOne("Educate.Domain.Entities.Exam", "Exam")
+                        .WithMany("ExamQuestions")
+                        .HasForeignKey("ExamId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Educate.Domain.Entities.Question", "Question")
+                        .WithMany()
+                        .HasForeignKey("QuestionId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Exam");
+
+                    b.Navigation("Question");
+                });
+
+            modelBuilder.Entity("Educate.Domain.Entities.Level", b =>
                 {
                     b.HasOne("Educate.Domain.Entities.Course", "Course")
-                        .WithMany()
+                        .WithMany("Levels")
                         .HasForeignKey("CourseId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Course");
+                });
+
+            modelBuilder.Entity("Educate.Domain.Entities.LoginAttempt", b =>
+                {
+                    b.HasOne("Educate.Domain.Entities.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("Educate.Domain.Entities.Payment", b =>
+                {
+                    b.HasOne("Educate.Domain.Entities.Level", "Level")
+                        .WithMany()
+                        .HasForeignKey("LevelId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
@@ -534,7 +1168,7 @@ namespace Educate.Infrastructure.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.Navigation("Course");
+                    b.Navigation("Level");
 
                     b.Navigation("User");
                 });
@@ -550,11 +1184,71 @@ namespace Educate.Infrastructure.Migrations
                     b.Navigation("Course");
                 });
 
+            modelBuilder.Entity("Educate.Domain.Entities.Question", b =>
+                {
+                    b.HasOne("Educate.Domain.Entities.Subject", "Subject")
+                        .WithMany()
+                        .HasForeignKey("SubjectId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Subject");
+                });
+
+            modelBuilder.Entity("Educate.Domain.Entities.StudentAnswer", b =>
+                {
+                    b.HasOne("Educate.Domain.Entities.Question", "Question")
+                        .WithMany()
+                        .HasForeignKey("QuestionId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Educate.Domain.Entities.StudentExam", "StudentExam")
+                        .WithMany("StudentAnswers")
+                        .HasForeignKey("StudentExamId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Question");
+
+                    b.Navigation("StudentExam");
+                });
+
+            modelBuilder.Entity("Educate.Domain.Entities.StudentExam", b =>
+                {
+                    b.HasOne("Educate.Domain.Entities.Exam", "Exam")
+                        .WithMany()
+                        .HasForeignKey("ExamId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Educate.Domain.Entities.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Exam");
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("Educate.Domain.Entities.Subject", b =>
+                {
+                    b.HasOne("Educate.Domain.Entities.Level", "Level")
+                        .WithMany("Subjects")
+                        .HasForeignKey("LevelId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Level");
+                });
+
             modelBuilder.Entity("Educate.Domain.Entities.Subscription", b =>
                 {
-                    b.HasOne("Educate.Domain.Entities.Course", "Course")
+                    b.HasOne("Educate.Domain.Entities.Level", "Level")
                         .WithMany()
-                        .HasForeignKey("CourseId")
+                        .HasForeignKey("LevelId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
@@ -564,7 +1258,7 @@ namespace Educate.Infrastructure.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.Navigation("Course");
+                    b.Navigation("Level");
 
                     b.Navigation("User");
                 });
@@ -595,6 +1289,28 @@ namespace Educate.Infrastructure.Migrations
                         .IsRequired();
 
                     b.Navigation("Test");
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("Educate.Domain.Entities.TwoFactorBackupCode", b =>
+                {
+                    b.HasOne("Educate.Domain.Entities.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("Educate.Domain.Entities.UserSettings", b =>
+                {
+                    b.HasOne("Educate.Domain.Entities.User", "User")
+                        .WithOne("Settings")
+                        .HasForeignKey("Educate.Domain.Entities.UserSettings", "UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
 
                     b.Navigation("User");
                 });
@@ -650,9 +1366,32 @@ namespace Educate.Infrastructure.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("Educate.Domain.Entities.Course", b =>
+                {
+                    b.Navigation("Levels");
+                });
+
+            modelBuilder.Entity("Educate.Domain.Entities.Exam", b =>
+                {
+                    b.Navigation("ExamQuestions");
+                });
+
+            modelBuilder.Entity("Educate.Domain.Entities.Level", b =>
+                {
+                    b.Navigation("Subjects");
+                });
+
+            modelBuilder.Entity("Educate.Domain.Entities.StudentExam", b =>
+                {
+                    b.Navigation("StudentAnswers");
+                });
+
             modelBuilder.Entity("Educate.Domain.Entities.User", b =>
                 {
                     b.Navigation("Payments");
+
+                    b.Navigation("Settings")
+                        .IsRequired();
 
                     b.Navigation("Subscriptions");
 

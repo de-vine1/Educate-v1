@@ -15,18 +15,34 @@ public class GetUserSubscriptionsQueryHandler : IRequestHandler<GetUserSubscript
 
     public async Task<List<SubscriptionDto>> Handle(GetUserSubscriptionsQuery request, CancellationToken cancellationToken)
     {
-        return await _context.Subscriptions
+        var subscriptions = await _context.Subscriptions
             .AsNoTracking()
             .Where(s => s.UserId == request.UserId)
-            .Include(s => s.Course)
-            .Select(s => new SubscriptionDto(
+            .Include(s => s.Level)
+            .ThenInclude(l => l.Course)
+            .ToListAsync(cancellationToken);
+
+        var now = DateTime.UtcNow;
+
+        return subscriptions.Select(s =>
+        {
+            var daysRemaining = (s.EndDate - now).Days;
+            var status = s.IsCurrentlyValid() 
+                ? (daysRemaining <= 7 ? "Expiring Soon" : "Active")
+                : "Expired";
+
+            return new SubscriptionDto(
                 s.Id,
-                s.Course.Name,
+                s.Level.Course.Name,
+                s.Level.Name,
                 s.StartDate,
                 s.EndDate,
                 s.AmountPaid,
-                s.IsActive
-            ))
-            .ToListAsync(cancellationToken);
+                s.IsActive,
+                daysRemaining,
+                status,
+                s.CanRenew()
+            );
+        }).ToList();
     }
 }

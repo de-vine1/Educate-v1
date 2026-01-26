@@ -40,13 +40,33 @@ public static class IdentityExtensions
     {
         using var scope = serviceProvider.CreateScope();
         var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole>>();
+        var userManager = scope.ServiceProvider.GetRequiredService<UserManager<User>>();
 
+        // 1. Seed Roles
         string[] roles = ["Student", "Admin", "Instructor"];
 
         foreach (var role in roles)
         {
             if (!await roleManager.RoleExistsAsync(role))
                 await roleManager.CreateAsync(new IdentityRole(role));
+        }
+
+        // 2. Seed Default Admin User
+        var adminEmail = "admin@educate.com";
+        var adminUser = await userManager.FindByEmailAsync(adminEmail);
+
+        if (adminUser == null)
+        {
+            adminUser = User.Create("Platform", "Admin", adminEmail, "admin");
+            
+            // Note: In production, use a more secure password or environment variable
+            var result = await userManager.CreateAsync(adminUser, "Admin123!");
+            
+            if (result.Succeeded)
+            {
+                await userManager.AddToRoleAsync(adminUser, "Admin");
+                Console.WriteLine("Successfully seeded default Admin user: admin@educate.com / Admin123!");
+            }
         }
     }
 }

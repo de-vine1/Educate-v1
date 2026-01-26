@@ -11,7 +11,12 @@ public static class SecurityExtensions
 
         services.AddScoped<IEncryptionService, EncryptionService>();
         services.AddScoped<IAuditService, AuditService>();
-        services.AddScoped<IPaymentService, PaymentService>();
+        services.AddHttpClient<IPaymentService, PaymentService>();
+        
+        // Register Hangfire jobs
+        services.AddScoped<Educate.Infrastructure.Jobs.DeactivateExpiredSubscriptionsJob>();
+        services.AddScoped<Educate.Infrastructure.Jobs.SendWelcomeEmailsJob>();
+        services.AddScoped<Educate.Infrastructure.Jobs.SendSubscriptionExpiryNotificationsJob>();
 
         services.AddAntiforgery(options =>
         {

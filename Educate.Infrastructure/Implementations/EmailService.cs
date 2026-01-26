@@ -47,124 +47,195 @@ public class EmailService : IEmailService
         }
     }
 
+    private async Task<string> GetEmailTemplateAsync(string templateName, Dictionary<string, string> placeholders)
+    {
+        try
+        {
+            var templatePath = Path.Combine(AppContext.BaseDirectory, "wwwroot", "templates", "email");
+            var layoutPath = Path.Combine(templatePath, "layout.html");
+            var contentPath = Path.Combine(templatePath, $"{templateName}.html");
+
+            // Look for templates in common locations if AppContext.BaseDirectory doesn't have them
+            // This fallback is useful during development vs published
+            if (!File.Exists(layoutPath))
+            {
+                // Fallback attempt for dev environment
+                var currentDir = Directory.GetCurrentDirectory();
+                 // Try looking in educate.api/wwwroot if running from there
+                templatePath = Path.Combine(currentDir, "wwwroot", "templates", "email");
+                layoutPath = Path.Combine(templatePath, "layout.html");
+                contentPath = Path.Combine(templatePath, $"{templateName}.html");
+                
+                if (!File.Exists(layoutPath))
+                {
+                    // one more level up if we are in bin folder
+                     templatePath = Path.Combine(currentDir, "..", "..", "..", "wwwroot", "templates", "email");
+                     layoutPath = Path.Combine(templatePath, "layout.html");
+                     contentPath = Path.Combine(templatePath, $"{templateName}.html");
+                }
+            }
+
+            if (!File.Exists(layoutPath) || !File.Exists(contentPath))
+            {
+                _logger.LogWarning("Template not found. Layout: {Layout}, Content: {Content}", layoutPath, contentPath);
+                // Fallback to simple replacements if file not found, or throw
+                return $"<html><body><p>Error: Email template '{templateName}' not found.</p></body></html>";
+            }
+
+            var layoutContent = await File.ReadAllTextAsync(layoutPath);
+            var innerContent = await File.ReadAllTextAsync(contentPath);
+
+            // 1. Inject content into layout
+            var fullHtml = layoutContent.Replace("{{content}}", innerContent);
+
+            // 2. Add global placeholders
+            placeholders["year"] = DateTime.UtcNow.Year.ToString();
+            placeholders["platformName"] = "Educate Platform";
+            
+            // 3. Replace all placeholders
+            foreach (var kvp in placeholders)
+            {
+                fullHtml = fullHtml.Replace($"{{{{{kvp.Key}}}}}", kvp.Value);
+            }
+
+            return fullHtml;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to load email template {TemplateName}", templateName);
+            throw; // Or return basic HTML
+        }
+    }
+
     public async Task SendWelcomeEmailAsync(string toEmail, string userName)
     {
-        var subject = "Welcome to Educate Platform";
-        var message = $@"
-            <div style='font-family: Arial, sans-serif; padding: 20px;'>
-                <h2>Welcome to Educate Platform!</h2>
-                <p>Hello {userName},</p>
-                <p>Your account has been created successfully. We are excited to have you on board.</p>
-                <p>Start exploring our courses today!</p>
-                <br>
-                <p>Best regards,</p>
-                <p>Educate Platform Team</p>
-            </div>";
-
-        await SendEmailAsync(toEmail, subject, message);
+        var placeholders = new Dictionary<string, string>
+        {
+            { "userName", userName }
+        };
+        var message = await GetEmailTemplateAsync("welcome", placeholders);
+        await SendEmailAsync(toEmail, "Welcome to Educate Platform", message);
     }
 
     public async Task SendPasswordResetEmailAsync(string toEmail, string resetToken)
     {
-        var subject = "Password Reset Request - Educate Platform";
-        var resetLink = $"https://educate.com/reset-password?token={resetToken}";
-        var message = $@"
-            <div style='font-family: Arial, sans-serif; padding: 20px;'>
-                <h2>Password Reset Request</h2>
-                <p>Hello,</p>
-                <p>You have requested to reset your password for your Educate Platform account.</p>
-                <p><a href='{resetLink}' style='background-color: #007bff; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;'>Reset Password</a></p>
-                <p>Or copy this link: {resetLink}</p>
-                <p>This link will expire in 30 minutes for security reasons.</p>
-                <p>If you did not request this password reset, please ignore this email.</p>
-                <br>
-                <p>Best regards,</p>
-                <p>Educate Platform Team</p>
-            </div>";
-
-        await SendEmailAsync(toEmail, subject, message);
+        var actionUrl = $"https://educate.com/reset-password?token={resetToken}";
+        var placeholders = new Dictionary<string, string>
+        {
+            { "actionUrl", actionUrl }
+        };
+        var message = await GetEmailTemplateAsync("password-reset", placeholders);
+        await SendEmailAsync(toEmail, "Password Reset Request - Educate Platform", message);
     }
 
     public async Task SendEmailConfirmationAsync(string toEmail, string userName, string confirmationToken)
     {
-        var subject = "Confirm Your Email Address";
-        var confirmLink = $"https://educate.com/confirm-email?token={confirmationToken}";
-        var message = $@"
-            <div style='font-family: Arial, sans-serif; padding: 20px;'>
-                <h2>Confirm Your Email</h2>
-                <p>Hello {userName},</p>
-                <p>Please confirm your email address by clicking the link below:</p>
-                <p><a href='{confirmLink}' style='background-color: #28a745; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;'>Confirm Email</a></p>
-                <p>This link will expire in 24 hours.</p>
-                <br>
-                <p>Best regards,</p>
-                <p>Educate Platform Team</p>
-            </div>";
-
-        await SendEmailAsync(toEmail, subject, message);
+        var actionUrl = $"https://educate.com/confirm-email?token={confirmationToken}";
+        var placeholders = new Dictionary<string, string>
+        {
+            { "userName", userName },
+            { "actionUrl", actionUrl }
+        };
+        var message = await GetEmailTemplateAsync("confirm-email", placeholders);
+        await SendEmailAsync(toEmail, "Confirm Your Email Address", message);
     }
 
     public async Task SendLoginNotificationAsync(string toEmail, string userName, string ipAddress, string userAgent)
     {
-        var subject = "Login Notification";
-        var message = $@"
-            <div style='font-family: Arial, sans-serif; padding: 20px;'>
-                <h2>New Login Detected</h2>
-                <p>Hello {userName},</p>
-                <p>Your account was accessed from:</p>
-                <ul>
-                    <li><strong>IP:</strong> {ipAddress}</li>
-                    <li><strong>Device:</strong> {userAgent}</li>
-                    <li><strong>Time:</strong> {DateTime.UtcNow:yyyy-MM-dd HH:mm:ss} UTC</li>
-                </ul>
-                <p>If this wasn't you, please secure your account immediately.</p>
-                <br>
-                <p>Best regards,</p>
-                <p>Educate Platform Team</p>
-            </div>";
-
-        await SendEmailAsync(toEmail, subject, message);
+        var placeholders = new Dictionary<string, string>
+        {
+            { "userName", userName },
+            { "ipAddress", ipAddress },
+            { "userAgent", userAgent },
+            { "timestamp", DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss") + " UTC" }
+        };
+        var message = await GetEmailTemplateAsync("login-notification", placeholders);
+        await SendEmailAsync(toEmail, "Login Notification", message);
     }
 
     public async Task SendPasswordResetConfirmationAsync(string toEmail, string userName, string ipAddress, string userAgent)
     {
-        var subject = "Password Reset Successful - Educate Platform";
-        var message = $@"
-            <div style='font-family: Arial, sans-serif; padding: 20px;'>
-                <h2>Password Reset Successful</h2>
-                <p>Hello {userName},</p>
-                <p>Your password has been successfully reset.</p>
-                <p><strong>Reset Details:</strong></p>
-                <ul>
-                    <li><strong>IP:</strong> {ipAddress}</li>
-                    <li><strong>Device:</strong> {userAgent}</li>
-                    <li><strong>Time:</strong> {DateTime.UtcNow:yyyy-MM-dd HH:mm:ss} UTC</li>
-                </ul>
-                <p>If you did not perform this action, please contact support immediately.</p>
-                <br>
-                <p>Best regards,</p>
-                <p>Educate Platform Team</p>
-            </div>";
-
-        await SendEmailAsync(toEmail, subject, message);
+        var placeholders = new Dictionary<string, string>
+        {
+            { "userName", userName },
+            { "ipAddress", ipAddress },
+            { "userAgent", userAgent },
+            { "timestamp", DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss") + " UTC" }
+        };
+        var message = await GetEmailTemplateAsync("password-reset-success", placeholders);
+        await SendEmailAsync(toEmail, "Password Reset Successful - Educate Platform", message);
     }
 
     public async Task SendPasswordSetConfirmationAsync(string toEmail, string userName)
     {
-        var subject = "Account Setup Complete - Educate Platform";
-        var loginLink = "https://educate.com/login";
-        var message = $@"
-            <div style='font-family: Arial, sans-serif; padding: 20px;'>
-                <h2>Account Setup Complete</h2>
-                <p>Hello {userName},</p>
-                <p>Great news! Your account setup is now complete.</p>
-                <p>You can now login using either your email/password or Google OAuth.</p>
-                <p><a href='{loginLink}'>Login here</a></p>
-                <br>
-                <p>Best regards,</p>
-                <p>Educate Platform Team</p>
-            </div>";
+        var placeholders = new Dictionary<string, string>
+        {
+            { "userName", userName }
+        };
+        var message = await GetEmailTemplateAsync("account-setup-complete", placeholders);
+        await SendEmailAsync(toEmail, "Account Setup Complete - Educate Platform", message);
+    }
 
-        await SendEmailAsync(toEmail, subject, message);
+    public async Task SendPasswordChangedNotificationAsync(string toEmail, string userName)
+    {
+        var placeholders = new Dictionary<string, string>
+        {
+            { "userName", userName }
+        };
+        var message = await GetEmailTemplateAsync("password-changed", placeholders);
+        await SendEmailAsync(toEmail, "Password Changed Successfully", message);
+    }
+
+    public async Task SendEmailVerificationCodeAsync(string toEmail, string userName, string code, string emailType)
+    {
+        var placeholders = new Dictionary<string, string>
+        {
+            { "userName", userName },
+            { "code", code },
+            { "emailType", emailType }
+        };
+        var message = await GetEmailTemplateAsync("email-verification-code", placeholders);
+        await SendEmailAsync(toEmail, "Email Verification Code", message);
+    }
+
+    public async Task SendEmailChangedNotificationAsync(string toEmail, string userName, string newEmail)
+    {
+        var placeholders = new Dictionary<string, string>
+        {
+            { "userName", userName },
+            { "newEmail", newEmail }
+        };
+        var message = await GetEmailTemplateAsync("email-changed", placeholders);
+        await SendEmailAsync(toEmail, "Email Address Changed", message);
+    }
+
+    public async Task SendAccountDeletionConfirmationAsync(string toEmail, string userName)
+    {
+        var placeholders = new Dictionary<string, string>
+        {
+            { "userName", userName }
+        };
+        var message = await GetEmailTemplateAsync("account-deleted", placeholders);
+        await SendEmailAsync(toEmail, "Account Deleted", message);
+    }
+
+    public async Task Send2FAEnabledNotificationAsync(string toEmail, string userName)
+    {
+         var placeholders = new Dictionary<string, string>
+        {
+            { "userName", userName }
+        };
+        var message = await GetEmailTemplateAsync("2fa-enabled", placeholders);
+        await SendEmailAsync(toEmail, "Two-Factor Authentication Enabled", message);
+    }
+
+    public async Task Send2FADisabledNotificationAsync(string toEmail, string userName)
+    {
+         var placeholders = new Dictionary<string, string>
+        {
+            { "userName", userName }
+        };
+        var message = await GetEmailTemplateAsync("2fa-disabled", placeholders);
+        await SendEmailAsync(toEmail, "Two-Factor Authentication Disabled", message);
     }
 }

@@ -60,3 +60,5 @@ CodeCoverage/
 *.VisualState.xml
 TestResult.xml
 nunit-*.xml
+educate_platform_technical_roadmap.md
+prd_ats_ican_examination_preparation_platform.md

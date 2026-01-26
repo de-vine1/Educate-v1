@@ -12,17 +12,20 @@ public class LoginUserCommandHandler : IRequestHandler<LoginUserCommand, LoginRe
     private readonly IJwtService _jwtService;
     private readonly IEmailService _emailService;
     private readonly ILogger<LoginUserCommandHandler> _logger;
+    private readonly IAppDbContext _context;
 
     public LoginUserCommandHandler(
         UserManager<User> userManager,
         IJwtService jwtService,
         IEmailService emailService,
-        ILogger<LoginUserCommandHandler> logger)
+        ILogger<LoginUserCommandHandler> logger,
+        IAppDbContext context)
     {
         _userManager = userManager;
         _jwtService = jwtService;
         _emailService = emailService;
         _logger = logger;
+        _context = context;
     }
 
     public async Task<LoginResponse> Handle(LoginUserCommand request, CancellationToken cancellationToken)
@@ -32,16 +35,32 @@ public class LoginUserCommandHandler : IRequestHandler<LoginUserCommand, LoginRe
                    ?? await _userManager.FindByNameAsync(request.EmailOrUsername);
 
         if (user == null)
+        {
+            // Don't log failed attempt for non-existent users (prevents enumeration tracking)
             return new LoginResponse(false, "Invalid credentials");
+        }
 
         // Check if account is locked
         if (await _userManager.IsLockedOutAsync(user))
+        {
+            // Record failed attempt
+            var lockoutAttempt = LoginAttempt.CreateFailed(user.Id, request.IpAddress, request.UserAgent, "Account locked");
+            _context.LoginAttempts.Add(lockoutAttempt);
+            await _context.SaveChangesAsync(cancellationToken);
+
             return new LoginResponse(false, "Account is locked due to multiple failed login attempts");
+        }
 
         // Validate password
         if (!await _userManager.CheckPasswordAsync(user, request.Password))
         {
             await _userManager.AccessFailedAsync(user);
+
+            // Record failed attempt
+            var failedAttempt = LoginAttempt.CreateFailed(user.Id, request.IpAddress, request.UserAgent, "Invalid password");
+            _context.LoginAttempts.Add(failedAttempt);
+            await _context.SaveChangesAsync(cancellationToken);
+
             return new LoginResponse(false, "Invalid credentials");
         }
 
@@ -51,6 +70,11 @@ public class LoginUserCommandHandler : IRequestHandler<LoginUserCommand, LoginRe
         // Update login time
         user.UpdateLastLogin();
         await _userManager.UpdateAsync(user);
+
+        // Record successful login attempt
+        var successAttempt = LoginAttempt.CreateSuccessful(user.Id, request.IpAddress, request.UserAgent);
+        _context.LoginAttempts.Add(successAttempt);
+        await _context.SaveChangesAsync(cancellationToken);
 
         // Generate tokens
         var token = await _jwtService.GenerateTokenAsync(user);

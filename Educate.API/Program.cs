@@ -2,6 +2,7 @@ using AspNetCoreRateLimit;
 using Educate.API.Extensions;
 using Educate.API.Middlewares;
 using Serilog;
+using Educate.Infrastructure;
 using Hangfire;
 using Hangfire.PostgreSql;
 
@@ -60,6 +61,20 @@ app.UseCors("DefaultPolicy");
 app.UseAuthentication();
 app.UseAuthorization();
 app.UseHangfireDashboard("/hangfire");
+
+// Schedule recurring jobs
+RecurringJob.AddOrUpdate<Educate.Infrastructure.Jobs.DeactivateExpiredSubscriptionsJob>(
+    "deactivate-expired-subscriptions",
+    job => job.ExecuteAsync(),
+    Cron.Daily // Runs every day at midnight UTC
+);
+
+RecurringJob.AddOrUpdate<Educate.Infrastructure.Jobs.SendSubscriptionExpiryNotificationsJob>(
+    "send-expiry-notifications",
+    job => job.ExecuteAsync(),
+    Cron.Daily // Runs every day at midnight UTC
+);
+
 app.MapControllers();
 
 app.Run();

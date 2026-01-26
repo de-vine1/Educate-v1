@@ -14,7 +14,11 @@ public class SecurityController : ControllerBase
         _antiforgery = antiforgery;
     }
 
+    /// <summary>
+    /// Retrieves a CSRF token for secure form submissions
+    /// </summary>
     [HttpGet("csrf-token")]
+    [ProducesResponseType(typeof(object), StatusCodes.Status200OK)]
     public IActionResult GetCsrfToken()
     {
         var tokens = _antiforgery.GetAndStoreTokens(HttpContext);

@@ -18,6 +18,7 @@ public class GetCourseByIdQueryHandler : IRequestHandler<GetCourseByIdQuery, Cou
     {
         return await _context.Courses
             .AsNoTracking()
+            .Include(c => c.Levels)
             .FirstOrDefaultAsync(c => c.Id == request.Id, cancellationToken);
     }
 }
