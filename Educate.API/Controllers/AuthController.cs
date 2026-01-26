@@ -43,7 +43,14 @@ public class AuthController : ControllerBase
         _rateLimitingService = rateLimitingService;
     }
 
+    /// <summary>
+    /// Registers a new user account
+    /// </summary>
+    /// <param name="model">Registration details</param>
+    /// <returns>Registration result</returns>
     [HttpPost("register")]
+    [ProducesResponseType(typeof(RegisterResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<ActionResult<RegisterResponse>> Register([FromBody] RegisterDto model)
     {
         if (!ModelState.IsValid)
@@ -65,7 +72,13 @@ public class AuthController : ControllerBase
         return Ok(result);
     }
 
+    /// <summary>
+    /// Confirms user email address
+    /// </summary>
+    /// <param name="token">The confirmation token</param>
     [HttpGet("confirm-email")]
+    [ProducesResponseType(typeof(object), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> ConfirmEmail([FromQuery] string token)
     {
         if (string.IsNullOrEmpty(token))
@@ -97,7 +110,14 @@ public class AuthController : ControllerBase
         return BadRequest("Invalid or expired confirmation token");
     }
 
+    /// <summary>
+    /// Authenticates a user and returns a JWT token
+    /// </summary>
+    /// <param name="model">Login credentials</param>
+    /// <returns>JWT token and refresh token</returns>
     [HttpPost("login")]
+    [ProducesResponseType(typeof(LoginResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<ActionResult<LoginResponse>> Login([FromBody] LoginDto model)
     {
         if (!ModelState.IsValid)
@@ -115,8 +135,14 @@ public class AuthController : ControllerBase
         return Ok(result);
     }
 
+    /// <summary>
+    /// Retrieves current user profile
+    /// </summary>
     [HttpGet("me")]
     [Authorize]
+    [ProducesResponseType(typeof(UserProfileDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<ActionResult<UserProfileDto>> GetProfile()
     {
         var userId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
@@ -134,7 +160,11 @@ public class AuthController : ControllerBase
         }
     }
 
+    /// <summary>
+    /// Initiates Google OAuth login
+    /// </summary>
     [HttpGet("google-login")]
+    [ProducesResponseType(StatusCodes.Status302Found)]
     public IActionResult GoogleLogin()
     {
         var redirectUrl = Url.Action("GoogleCallback", "Auth");
@@ -145,7 +175,12 @@ public class AuthController : ControllerBase
         return Challenge(properties, "Google");
     }
 
+    /// <summary>
+    /// Callback for Google OAuth
+    /// </summary>
     [HttpGet("google-callback")]
+    [ProducesResponseType(typeof(LoginResponseDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<ActionResult<LoginResponseDto>> GoogleCallback()
     {
         var result = await HttpContext.AuthenticateAsync("Google");
@@ -279,7 +314,14 @@ public class AuthController : ControllerBase
         );
     }
 
+    /// <summary>
+    /// Refreshes an expired JWT token
+    /// </summary>
+    /// <param name="model">Refresh token details</param>
+    /// <returns>New JWT token</returns>
     [HttpPost("refresh-token")]
+    [ProducesResponseType(typeof(LoginResponseDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<ActionResult<LoginResponseDto>> RefreshToken([FromBody] RefreshTokenDto model)
     {
         if (!ModelState.IsValid)
@@ -333,7 +375,13 @@ public class AuthController : ControllerBase
         );
     }
 
+    /// <summary>
+    /// Initiates password reset process
+    /// </summary>
+    /// <param name="model">Email address</param>
     [HttpPost("forgot-password")]
+    [ProducesResponseType(typeof(ForgotPasswordResponseDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<ActionResult<ForgotPasswordResponseDto>> ForgotPassword(
         [FromBody] ForgotPasswordDto model
     )
@@ -384,7 +432,13 @@ public class AuthController : ControllerBase
         return Ok(new ForgotPasswordResponseDto { Success = true, Message = genericMessage });
     }
 
+    /// <summary>
+    /// Resets user password using token
+    /// </summary>
+    /// <param name="model">Reset token and new password</param>
     [HttpPost("reset-password")]
+    [ProducesResponseType(typeof(ForgotPasswordResponseDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<ActionResult<ForgotPasswordResponseDto>> ResetPassword(
         [FromBody] ResetPasswordDto model
     )
@@ -481,8 +535,15 @@ public class AuthController : ControllerBase
         );
     }
 
+    /// <summary>
+    /// Sets a password for an OAuth user
+    /// </summary>
+    /// <param name="model">New password</param>
     [HttpPost("set-password")]
     [Authorize]
+    [ProducesResponseType(typeof(ForgotPasswordResponseDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     public async Task<ActionResult<ForgotPasswordResponseDto>> SetPassword(
         [FromBody] SetPasswordDto model
     )

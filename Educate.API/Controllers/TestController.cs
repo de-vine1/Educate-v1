@@ -14,7 +14,12 @@ public class TestController : ControllerBase
         _emailService = emailService;
     }
 
+    /// <summary>
+    /// Sends a test email to verify email service configuration
+    /// </summary>
     [HttpPost("send-test-email")]
+    [ProducesResponseType(typeof(object), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> SendTestEmail([FromBody] TestEmailRequest request)
     {
         try

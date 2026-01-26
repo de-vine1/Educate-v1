@@ -75,14 +75,11 @@ A production-grade identity system with strong security and flexibility.
 Model professional examinations accurately and flexibly.
 
 ### Deliverables
-- Course management (ATS, ICAN)
-- Level management:
-  - ATS1, ATS2, ATS3
-  - ICAN Foundation, Skills, Professional
-- Subject management per level
+- Course management (Courses can be added by the Admin)
+- Level management (Levels can be added by the Admin)
+- Subject management per level (Subjects can be added by the Admin)
 - Admin-only CRUD operations
 - Soft-delete strategy
-- Initial seeding for ATS & ICAN structures
 
 ### Outcome
 A robust academic structure capable of supporting multiple professional exams.
@@ -113,7 +110,7 @@ Clear and enforceable access rules before payment integration.
 
 ---
 
-## Milestone 5 – Payments Integration (Monnify & Paystack)
+## Milestone 5 – Payments Integration (Paystack)
 **Timeline:** Weeks 8–9
 
 ### Objectives
@@ -124,13 +121,12 @@ Implement secure, verifiable payment processing.
 - Paystack integration:
   - Transaction initialization
   - Server-side verification
-- Monnify one-time payment integration
-- Secure webhook handling
-- Webhook signature validation
-- Server-side payment verification only
-- Persistent payment records
-- Receipt generation and storage
-- Subscription activation on successful payment
+  - Secure webhook handling
+  - Webhook signature validation
+  - Server-side payment verification only
+  - Persistent payment records
+  - Receipt generation and storage
+  - Subscription activation on successful payment
 
 ### Outcome
 A reliable financial system with audit-ready records.
@@ -150,7 +146,7 @@ Automate subscription lifecycle management.
   - 30 days before expiry
   - 7 days before expiry
   - On expiry
-- Email notifications (SendGrid)
+- Email notifications
 - In-app notifications
 - Grace-period logic
 

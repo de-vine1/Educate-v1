@@ -4,7 +4,7 @@ using MediatR;
 
 namespace Educate.Application.Courses.Commands.CreateCourse;
 
-public class CreateCourseCommandHandler : IRequestHandler<CreateCourseCommand, int>
+public class CreateCourseCommandHandler : IRequestHandler<CreateCourseCommand, Guid>
 {
     private readonly IAppDbContext _context;
 
@@ -13,9 +13,12 @@ public class CreateCourseCommandHandler : IRequestHandler<CreateCourseCommand, i
         _context = context;
     }
 
-    public async Task<int> Handle(CreateCourseCommand request, CancellationToken cancellationToken)
+    public async Task<Guid> Handle(CreateCourseCommand request, CancellationToken cancellationToken)
     {
-        var course = Course.Create(request.Name, request.Description, request.AnnualPrice);
+        // Infer Code from Name if not provided (simple logic for now)
+        var code = request.Code ?? request.Name.Substring(0, Math.Min(3, request.Name.Length)).ToUpper();
+        
+        var course = Course.Create(request.Name, code, request.Description);
 
         _context.Courses.Add(course);
         await _context.SaveChangesAsync(cancellationToken);

@@ -1,7 +1,13 @@
+using Educate.Application.Interfaces;
+using Educate.Application.Models.DTOs;
+
 namespace Educate.Application.Interfaces;
+
+
 
 public interface IPaymentService
 {
-    Task<string> ProcessPaymentAsync(string userId, int courseId, string cardToken);
-    Task<bool> VerifyPaymentAsync(string transactionId);
+    Task<PaymentInitializationResponse> InitializePaymentAsync(string userId, Guid levelId, string email, decimal amount);
+    Task<PaymentVerificationResponse> VerifyPaymentAsync(string reference);
+    bool ValidateSignature(string body, string signature);
 }

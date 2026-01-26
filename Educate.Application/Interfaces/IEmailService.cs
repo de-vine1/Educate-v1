@@ -19,4 +19,10 @@ public interface IEmailService
         string userAgent
     );
     Task SendPasswordSetConfirmationAsync(string toEmail, string userName);
+    Task SendPasswordChangedNotificationAsync(string toEmail, string userName);
+    Task SendEmailVerificationCodeAsync(string toEmail, string userName, string code, string emailType);
+    Task SendEmailChangedNotificationAsync(string toEmail, string userName, string newEmail);
+    Task SendAccountDeletionConfirmationAsync(string toEmail, string userName);
+    Task Send2FAEnabledNotificationAsync(string toEmail, string userName);
+    Task Send2FADisabledNotificationAsync(string toEmail, string userName);
 }

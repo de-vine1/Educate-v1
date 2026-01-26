@@ -18,11 +18,13 @@ public class GetPaymentHistoryQueryHandler : IRequestHandler<GetPaymentHistoryQu
         return await _context.Payments
             .AsNoTracking()
             .Where(p => p.UserId == request.UserId)
-            .Include(p => p.Course)
+            .Include(p => p.Level)
+            .ThenInclude(l => l.Course)
             .OrderByDescending(p => p.CreatedAt)
             .Select(p => new PaymentDto(
                 p.Id,
-                p.Course.Name,
+                p.Level.Course.Name,
+                p.Level.Name,
                 p.Amount,
                 p.Status,
                 p.CreatedAt
