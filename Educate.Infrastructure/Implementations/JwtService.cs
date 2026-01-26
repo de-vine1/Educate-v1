@@ -15,12 +15,12 @@ public class JwtService : IJwtService
 {
     private readonly IConfiguration _configuration;
     private readonly UserManager<User> _userManager;
-    private readonly AppDbContext _context;
+    private readonly IAppDbContext _context;
 
     public JwtService(
         IConfiguration configuration,
         UserManager<User> userManager,
-        AppDbContext context
+        IAppDbContext context
     )
     {
         _configuration = configuration;
@@ -76,7 +76,7 @@ public class JwtService : IJwtService
         };
 
         _context.RefreshTokens.Add(refreshToken);
-        await _context.SaveChangesAsync();
+        await _context.SaveChangesAsync(CancellationToken.None);
 
         return refreshToken.Token;
     }
@@ -94,7 +94,7 @@ public class JwtService : IJwtService
 
         // Remove used refresh token
         _context.RefreshTokens.Remove(token);
-        await _context.SaveChangesAsync();
+        await _context.SaveChangesAsync(CancellationToken.None);
 
         return true;
     }

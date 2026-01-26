@@ -18,6 +18,14 @@ public class RequestResponseLoggingMiddleware
 
     public async Task InvokeAsync(HttpContext context)
     {
+        // Skip logging for Hangfire dashboard
+        if (context.Request.Path.StartsWithSegments("/hangfire"))
+        {
+            await _next(context);
+            return;
+        }
+
+        // Ensure the request body can be read multiple times);
         await LogRequest(context);
 
         var originalBodyStream = context.Response.Body;

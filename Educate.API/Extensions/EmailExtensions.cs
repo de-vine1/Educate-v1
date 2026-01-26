@@ -1,7 +1,7 @@
 using Educate.Application.Interfaces;
 using Educate.Infrastructure.Implementations;
 using Educate.Infrastructure.Services;
-using SendGrid;
+
 
 namespace Educate.API.Extensions;
 
@@ -12,9 +12,9 @@ public static class EmailExtensions
         IConfiguration configuration
     )
     {
-        var apiKey = configuration["SendGrid:ApiKey"];
-        services.AddSingleton<ISendGridClient>(_ => new SendGridClient(apiKey));
-        services.AddScoped<IEmailService, SendGridEmailService>();
+
+        services.AddHttpClient<EmailService>();
+        services.AddScoped<IEmailService, EmailService>();
         services.AddScoped<IUserValidationService, UserValidationService>();
         services.AddScoped<IJwtService, JwtService>();
         services.AddSingleton<RateLimitingService>();

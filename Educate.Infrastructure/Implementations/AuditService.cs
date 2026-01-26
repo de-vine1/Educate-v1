@@ -6,9 +6,9 @@ namespace Educate.Infrastructure.Implementations;
 
 public class AuditService : IAuditService
 {
-    private readonly AppDbContext _context;
+    private readonly IAppDbContext _context;
 
-    public AuditService(AppDbContext context)
+    public AuditService(IAppDbContext context)
     {
         _context = context;
     }
@@ -31,6 +31,6 @@ public class AuditService : IAuditService
         };
 
         _context.AuditLogs.Add(auditLog);
-        await _context.SaveChangesAsync();
+        await _context.SaveChangesAsync(CancellationToken.None);
     }
 }
