@@ -14,6 +14,13 @@ public class AuditMiddleware
 
     public async Task InvokeAsync(HttpContext context, IAuditService auditService)
     {
+        // Skip auditing for Hangfire dashboard and static files
+        if (context.Request.Path.StartsWithSegments("/hangfire"))
+        {
+            await _next(context);
+            return;
+        }
+
         await _next(context);
 
         if (ShouldAudit(context))

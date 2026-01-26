@@ -4,7 +4,9 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Educate.Infrastructure.Database;
 
-public class AppDbContext : IdentityDbContext<User>
+using Educate.Application.Interfaces;
+
+public class AppDbContext : IdentityDbContext<User>, IAppDbContext
 {
     public AppDbContext(DbContextOptions<AppDbContext> options)
         : base(options) { }

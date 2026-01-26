@@ -2,6 +2,8 @@ using AspNetCoreRateLimit;
 using Educate.API.Extensions;
 using Educate.API.Middlewares;
 using Serilog;
+using Hangfire;
+using Hangfire.PostgreSql;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -21,6 +23,16 @@ builder.Services.AddCorsPolicy(builder.Configuration);
 builder.Services.AddRateLimiting(builder.Configuration);
 builder.Services.AddSecurityServices();
 builder.Services.AddEmailServices(builder.Configuration);
+builder.Services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(typeof(Educate.Application.Interfaces.IAppDbContext).Assembly));
+
+// Add Hangfire
+builder.Services.AddHangfire(configuration => configuration
+    .SetDataCompatibilityLevel(CompatibilityLevel.Version_180)
+    .UseSimpleAssemblyNameTypeSerializer()
+    .UseRecommendedSerializerSettings()
+    .UsePostgreSqlStorage(c => c.UseNpgsqlConnection(builder.Configuration.GetConnectionString("DefaultConnection"))));
+
+builder.Services.AddHangfireServer();
 
 var app = builder.Build();
 
@@ -47,6 +59,7 @@ app.UseStaticFiles();
 app.UseCors("DefaultPolicy");
 app.UseAuthentication();
 app.UseAuthorization();
+app.UseHangfireDashboard("/hangfire");
 app.MapControllers();
 
 app.Run();

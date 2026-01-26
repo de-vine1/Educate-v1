@@ -1,9 +1,11 @@
 using System.Security.Claims;
-using Educate.Domain.Entities;
-using Educate.Infrastructure.Database;
+using Educate.Application.Courses.Commands.CreateCourse;
+using Educate.Application.Courses.Commands.SubscribeToCourse;
+using Educate.Application.Courses.Queries.GetAllCourses;
+using Educate.Application.Courses.Queries.GetCourseById;
+using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 
 namespace Educate.API.Controllers;
 
@@ -11,27 +13,35 @@ namespace Educate.API.Controllers;
 [Route("api/[controller]")]
 public class CourseController : ControllerBase
 {
-    private readonly AppDbContext _context;
+    private readonly IMediator _mediator;
 
-    public CourseController(AppDbContext context)
+    public CourseController(IMediator mediator)
     {
-        _context = context;
+        _mediator = mediator;
+    }
+
+    [HttpPost]
+    [Authorize]
+    public async Task<IActionResult> CreateCourse([FromBody] CreateCourseCommand command)
+    {
+        var courseId = await _mediator.Send(command);
+        return CreatedAtAction(nameof(GetCourseById), new { id = courseId }, new { id = courseId });
+    }
+
+    [HttpGet("{id}")]
+    public async Task<IActionResult> GetCourseById(int id)
+    {
+        var course = await _mediator.Send(new GetCourseByIdQuery(id));
+        if (course == null)
+            return NotFound();
+
+        return Ok(course);
     }
 
     [HttpGet]
     public async Task<IActionResult> GetCourses()
     {
-        var courses = await _context
-            .Courses.Where(c => c.IsActive)
-            .Select(c => new
-            {
-                c.Id,
-                c.Name,
-                c.Description,
-                c.AnnualPrice,
-            })
-            .ToListAsync();
-
+        var courses = await _mediator.Send(new GetAllCoursesQuery());
         return Ok(courses);
     }
 
@@ -40,30 +50,20 @@ public class CourseController : ControllerBase
     public async Task<IActionResult> Subscribe(int courseId)
     {
         var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        if (string.IsNullOrEmpty(userId))
+            return Unauthorized();
 
-        var existingSubscription = await _context.Subscriptions.AnyAsync(s =>
-            s.UserId == userId && s.CourseId == courseId && s.IsActive
-        );
-
-        if (existingSubscription)
-            return BadRequest("Already subscribed to this course");
-
-        var course = await _context.Courses.FindAsync(courseId);
-        if (course == null)
-            return NotFound();
-
-        var subscription = new Subscription
+        try 
         {
-            UserId = userId!,
-            CourseId = courseId,
-            StartDate = DateTime.UtcNow,
-            EndDate = DateTime.UtcNow.AddYears(1),
-            AmountPaid = course.AnnualPrice,
-        };
+            var result = await _mediator.Send(new SubscribeToCourseCommand(courseId, userId));
+            if (!result)
+                return BadRequest("Already subscribed or course not found");
 
-        _context.Subscriptions.Add(subscription);
-        await _context.SaveChangesAsync();
-
-        return Ok(new { message = "Subscription created successfully" });
+            return Ok(new { message = "Subscription created successfully" });
+        }
+        catch (ArgumentException)
+        {
+            return NotFound();
+        }
     }
 }

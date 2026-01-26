@@ -7,10 +7,10 @@ namespace Educate.Infrastructure.Implementations;
 
 public class PaymentService : IPaymentService
 {
-    private readonly AppDbContext _context;
+    private readonly IAppDbContext _context;
     private readonly IEncryptionService _encryptionService;
 
-    public PaymentService(AppDbContext context, IEncryptionService encryptionService)
+    public PaymentService(IAppDbContext context, IEncryptionService encryptionService)
     {
         _context = context;
         _encryptionService = encryptionService;
@@ -25,19 +25,17 @@ public class PaymentService : IPaymentService
         var transactionId = Guid.NewGuid().ToString();
         var encryptedToken = _encryptionService.Encrypt(cardToken);
 
-        var payment = new Payment
-        {
-            UserId = userId,
-            CourseId = courseId,
-            Amount = course.AnnualPrice,
-            PaymentMethod = "Card",
-            TransactionId = transactionId,
-            EncryptedCardToken = encryptedToken,
-            Status = "Pending",
-        };
+        var payment = Payment.Create(
+            userId,
+            courseId,
+            course.AnnualPrice,
+            "Card",
+            transactionId,
+            encryptedToken
+        );
 
         _context.Payments.Add(payment);
-        await _context.SaveChangesAsync();
+        await _context.SaveChangesAsync(CancellationToken.None);
 
         return transactionId;
     }

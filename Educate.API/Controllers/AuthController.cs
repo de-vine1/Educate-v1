@@ -1,13 +1,17 @@
 using Educate.Application.Interfaces;
-using Educate.Application.Models.DTOs;
-using Educate.Domain.Entities;
 using Educate.Infrastructure.Database;
 using Educate.Infrastructure.Services;
+using Educate.Application.Users.Commands.LoginUser;
+using Microsoft.EntityFrameworkCore;
+using Educate.Application.Users.Commands.RegisterUser;
+using Educate.Application.Users.Queries.GetUserProfile;
+using Educate.Application.Models.DTOs;
+using Educate.Domain.Entities;
+using MediatR;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 
 namespace Educate.API.Controllers;
 
@@ -15,128 +19,68 @@ namespace Educate.API.Controllers;
 [Route("api/[controller]")]
 public class AuthController : ControllerBase
 {
+    private readonly IMediator _mediator;
+    private readonly ILogger<AuthController> _logger;
     private readonly UserManager<User> _userManager;
     private readonly IEmailService _emailService;
-    private readonly ILogger<AuthController> _logger;
     private readonly AppDbContext _context;
     private readonly RateLimitingService _rateLimitingService;
 
     public AuthController(
+        IMediator mediator,
+        ILogger<AuthController> logger,
         UserManager<User> userManager,
         IEmailService emailService,
-        ILogger<AuthController> logger,
         AppDbContext context,
         RateLimitingService rateLimitingService
     )
     {
+        _mediator = mediator;
+        _logger = logger;
         _userManager = userManager;
         _emailService = emailService;
-        _logger = logger;
         _context = context;
         _rateLimitingService = rateLimitingService;
     }
 
     [HttpPost("register")]
-    public async Task<ActionResult<RegisterResponseDto>> Register([FromBody] RegisterDto model)
+    public async Task<ActionResult<RegisterResponse>> Register([FromBody] RegisterDto model)
     {
         if (!ModelState.IsValid)
-        {
             return BadRequest(ModelState);
-        }
 
-        // Check if username already exists
-        var existingUserByUsername = await _userManager.FindByNameAsync(model.Username);
-        if (existingUserByUsername != null)
-        {
-            return BadRequest(
-                new RegisterResponseDto { Success = false, Message = "Username already exists" }
-            );
-        }
-
-        // Check if email already exists
-        var existingUserByEmail = await _userManager.FindByEmailAsync(model.Email);
-        if (existingUserByEmail != null)
-        {
-            return BadRequest(
-                new RegisterResponseDto { Success = false, Message = "Email already exists" }
-            );
-        }
-
-        // Create new user
-        var user = new User
-        {
-            FirstName = model.FirstName,
-            LastName = model.LastName,
-            UserName = model.Username,
-            Email = model.Email,
-            EmailConfirmed = false,
-            CreatedAt = DateTime.UtcNow,
-        };
-
-        var result = await _userManager.CreateAsync(user, model.Password);
-
-        if (!result.Succeeded)
-        {
-            var errors = string.Join(", ", result.Errors.Select(e => e.Description));
-            return BadRequest(
-                new RegisterResponseDto
-                {
-                    Success = false,
-                    Message = $"Registration failed: {errors}",
-                }
-            );
-        }
-
-        // Generate email confirmation token
-        var confirmationToken = await _userManager.GenerateEmailConfirmationTokenAsync(user);
-
-        // Send confirmation email
-        try
-        {
-            await _emailService.SendEmailConfirmationAsync(
-                user.Email!,
-                user.FirstName,
-                confirmationToken
-            );
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Failed to send confirmation email to {Email}", user.Email);
-            // Continue with registration even if email fails
-        }
-
-        return Ok(
-            new RegisterResponseDto
-            {
-                Success = true,
-                Message =
-                    "Registration successful. Your email is not yet verified. Some features may be restricted until verification is complete.",
-                UserId = user.Id,
-                EmailConfirmationRequired = true,
-            }
+        var command = new RegisterUserCommand(
+            model.FirstName,
+            model.LastName,
+            model.Username,
+            model.Email,
+            model.Password
         );
+
+        var result = await _mediator.Send(command);
+
+        if (!result.Success)
+            return BadRequest(result);
+
+        return Ok(result);
     }
 
     [HttpGet("confirm-email")]
     public async Task<IActionResult> ConfirmEmail([FromQuery] string token)
     {
         if (string.IsNullOrEmpty(token))
-        {
             return BadRequest("Invalid confirmation token");
-        }
 
-        var users = _userManager.Users.Where(u => !u.EmailConfirmed).ToList();
+        var users = _userManager.Users.ToList().Where(u => !u.EmailConfirmed);
 
         foreach (var user in users)
         {
             var result = await _userManager.ConfirmEmailAsync(user, token);
             if (result.Succeeded)
             {
-                // Log confirmation time
-                user.EmailConfirmedAt = DateTime.UtcNow;
+                user.ConfirmEmail();
                 await _userManager.UpdateAsync(user);
 
-                // Send welcome email
                 try
                 {
                     await _emailService.SendWelcomeEmailAsync(user.Email!, user.FirstName);
@@ -154,87 +98,40 @@ public class AuthController : ControllerBase
     }
 
     [HttpPost("login")]
-    public async Task<ActionResult<LoginResponseDto>> Login([FromBody] LoginDto model)
+    public async Task<ActionResult<LoginResponse>> Login([FromBody] LoginDto model)
     {
         if (!ModelState.IsValid)
-        {
             return BadRequest(ModelState);
-        }
 
-        // Find user by email or username
-        var user =
-            await _userManager.FindByEmailAsync(model.EmailOrUsername)
-            ?? await _userManager.FindByNameAsync(model.EmailOrUsername);
-
-        if (user == null)
-        {
-            return BadRequest(
-                new LoginResponseDto { Success = false, Message = "Invalid credentials" }
-            );
-        }
-
-        // Check if account is locked
-        if (await _userManager.IsLockedOutAsync(user))
-        {
-            return BadRequest(
-                new LoginResponseDto
-                {
-                    Success = false,
-                    Message = "Account is locked due to multiple failed login attempts",
-                }
-            );
-        }
-
-        // Validate password
-        var passwordValid = await _userManager.CheckPasswordAsync(user, model.Password);
-        if (!passwordValid)
-        {
-            await _userManager.AccessFailedAsync(user);
-            return BadRequest(
-                new LoginResponseDto { Success = false, Message = "Invalid credentials" }
-            );
-        }
-
-        // Reset failed login attempts on successful login
-        await _userManager.ResetAccessFailedCountAsync(user);
-
-        // Update login time and metadata
-        user.LastLoginAt = DateTime.UtcNow;
-        await _userManager.UpdateAsync(user);
-
-        // Generate JWT token and refresh token
-        var jwtService = HttpContext.RequestServices.GetRequiredService<IJwtService>();
-        var token = await jwtService.GenerateTokenAsync(user);
-        var refreshToken = await jwtService.GenerateRefreshTokenAsync(user);
-
-        // Send login notification
         var ipAddress = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "Unknown";
         var userAgent = HttpContext.Request.Headers.UserAgent.ToString();
 
+        var command = new LoginUserCommand(model.EmailOrUsername, model.Password, ipAddress, userAgent);
+        var result = await _mediator.Send(command);
+
+        if (!result.Success)
+            return BadRequest(result);
+
+        return Ok(result);
+    }
+
+    [HttpGet("me")]
+    [Authorize]
+    public async Task<ActionResult<UserProfileDto>> GetProfile()
+    {
+        var userId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+        if (string.IsNullOrEmpty(userId))
+            return Unauthorized();
+
         try
         {
-            await _emailService.SendLoginNotificationAsync(
-                user.Email!,
-                user.FirstName,
-                ipAddress,
-                userAgent
-            );
+            var profile = await _mediator.Send(new GetUserProfileQuery(userId));
+            return Ok(profile);
         }
-        catch (Exception ex)
+        catch (ArgumentException)
         {
-            _logger.LogError(ex, "Failed to send login notification to {Email}", user.Email);
+            return NotFound();
         }
-
-        return Ok(
-            new LoginResponseDto
-            {
-                Success = true,
-                Message = "Login successful",
-                Token = token,
-                RefreshToken = refreshToken,
-                ExpiresAt = DateTime.UtcNow.AddHours(24),
-            }
-        );
     }
 
     [HttpGet("google-login")]
@@ -285,21 +182,31 @@ public class AuthController : ControllerBase
         if (user == null)
         {
             var username = email.Split('@')[0] + Guid.NewGuid().ToString()[..4];
-            user = new User
-            {
-                FirstName = firstName,
-                LastName = lastName,
-                UserName = username,
-                Email = email,
-                EmailConfirmed = true,
-                EmailConfirmedAt = DateTime.UtcNow,
-                CreatedAt = DateTime.UtcNow,
-                OAuthProvider = "Google",
-                OAuthId = googleId,
-            };
+            user = Educate.Domain.Entities.User.Create(firstName, lastName, email, username);
+            
+            if (string.IsNullOrEmpty(googleId))
+                 return BadRequest(new LoginResponseDto { Success = false, Message = "Google ID missing" });
+
+            user.LinkOAuth("Google", googleId);
 
             var createResult = await _userManager.CreateAsync(user);
-            if (!createResult.Succeeded)
+            if (createResult.Succeeded)
+            {
+                // Log confirmation time
+                user.ConfirmEmail();
+                await _userManager.UpdateAsync(user);
+
+                // Send welcome email
+                try
+                {
+                    await _emailService.SendWelcomeEmailAsync(user.Email, user.FirstName);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Failed to send welcome email to {Email}", user.Email);
+                }
+            }
+            else
             {
                 return BadRequest(
                     new LoginResponseDto
@@ -309,7 +216,6 @@ public class AuthController : ControllerBase
                     }
                 );
             }
-
             try
             {
                 await _emailService.SendWelcomeEmailAsync(user.Email, user.FirstName);
@@ -322,12 +228,11 @@ public class AuthController : ControllerBase
         else if (string.IsNullOrEmpty(user.OAuthProvider))
         {
             // Link existing account to Google OAuth
-            user.OAuthProvider = "Google";
-            user.OAuthId = googleId;
+            user.LinkOAuth("Google", googleId);
             await _userManager.UpdateAsync(user);
         }
 
-        user.LastLoginAt = DateTime.UtcNow;
+        user.UpdateLastLogin();
         await _userManager.UpdateAsync(user);
 
         var jwtService = HttpContext.RequestServices.GetRequiredService<IJwtService>();
